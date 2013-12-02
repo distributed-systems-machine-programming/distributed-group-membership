@@ -127,6 +127,10 @@ public class Gossiper extends Thread{
 		keyvalListenerThread.start();
 		
 	}
+	public void showcounters() {
+		messenger.showCounters();
+		
+	}
 	
 		
 	

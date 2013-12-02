@@ -15,7 +15,7 @@ import java.util.logging.Logger;
  * 
  */
 
-public class Messenger {
+public class Messenger extends Thread {
 	private final static int BUFFER_SIZE = 1500; ///using 1500 as its the recommended safe size for a UDP packet
 	private MemberList localMemberList = null;
 	private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -47,6 +47,17 @@ public class Messenger {
     private String clientIP;
     private int m;
     private int altKeyvalPort = 6767;
+    private int counter1=0;
+    private int counter2=0;
+    private int counter3=0;
+    private int counter4=0;
+    private int counter5=0;
+    long evenTime=0;
+    long oddTime=0;
+    long evenTime1=0;
+    long oddTime1=0;
+    private static final int maxClientsCount = 10;
+   // private static final clientThread[] threads = new clientThread[maxClientsCount];
 	Messenger (int port, MemberList localList, String machineID, int failureCleanUpRate, int failureTimeOut, int lossRate, int identifier, MapStore map, int keyvalPort, int m) throws Exception
 	{
 		localMemberList = localList;
@@ -681,13 +692,47 @@ public int findRightNode(int identifier) {
 	           Socket connectionSocket;
 			
 				connectionSocket = welcomeSocket.accept();
-			
-	           DataInputStream inFromClient = new DataInputStream(connectionSocket.getInputStream());
-	           int len = inFromClient.readInt();
+				getKeyValmessageImpl(connectionSocket);
+	           
+			      
+			}
+		}catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        
+     }
+
+	Thread getKeyValmessageThread = new Thread () {
+		  public void run () {
+			  
+		  }
+	};
+
+	private void getKeyValmessageImpl(Socket connectionSocket) {
+			DataInputStream inFromClient = null;
+			try {
+				inFromClient = new DataInputStream(connectionSocket.getInputStream());
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+	           int len=0;
+			try {
+				len = inFromClient.readInt();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 	           System.out.println( String.valueOf(len));
 	           byte[] temp_data = new byte[len];
 	           if (len > 0) {
-	               inFromClient.read(temp_data);
+	               try {
+					inFromClient.read(temp_data);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 	           }
 	           
 	           //System.out.println(temp_data);
@@ -713,10 +758,22 @@ public int findRightNode(int identifier) {
 			      }
 			      else if(sType.equals("a"))
 			      {
+			    	  if(counter1/2 == 0)
+                   {
+                   	evenTime=System.currentTimeMillis();
+                   }
+                   else
+                   {
+                   	oddTime = System.currentTimeMillis();
+                   	System.out.println("Time Gap for a:" + String.valueOf((long)(oddTime-evenTime)));
+                   }
+			    	  counter1++;
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
 			    	  receiveKV.print();
 			    	  int rightNode = findRightNode(receiveKV.identifier);
 			    	  sendAddKeyValMessage(receiveKV, rightNode);
+			    	  
+					
 			    	  //localMap.addEntry(receiveKV.identifier, receiveKV.val);
 			      }
 		    	  else if(sType.equals("u"))
@@ -744,12 +801,28 @@ public int findRightNode(int identifier) {
 			      }
 			      else if(sType.equals("b"))
 			      {
+			    	  if(counter2/2 == 0)
+                   {
+                   	evenTime1=System.currentTimeMillis();
+                   }
+                   else
+                   {
+                   	 oddTime1 = System.currentTimeMillis();
+                   	System.out.println("Time Gap for b:" + String.valueOf((long)(oddTime1-evenTime1)));
+                   }
+			    	  counter2++;
 			    	  String serverContactIP = connectionSocket.getInetAddress().toString();
 			    	  serverContactIP = serverContactIP.substring(1);
 			    	  System.out.println("serverContactIP: " + serverContactIP);
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
 			    	  receiveKV.print();
+			    	  try{
 			    	  localMap.addEntry(receiveKV.identifier, receiveKV.val);
+			    	  }
+			    	  catch(Exception e)
+			    	  {
+			    		  counter4++;
+			    	  }
 			    	  byte[] partMessage = generateKeyValByteMessage(9999);
 			  		  byte[] fullMessage = addKeyValHeader("ack", partMessage);
 			  		 sendKeyValmessage(fullMessage, serverContactIP);
@@ -822,18 +895,14 @@ public int findRightNode(int identifier) {
 			    	  //KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
 			    	  //receiveKV.print();
 			    	  //byte[] partMessage = generateKeyValByteMessage(receiveKV);
+			    	  counter3++;
 			  		  byte[] fullMessage = addKeyValHeader("clientAck", data);
 			  		  sendKeyValmessage(fullMessage, clientIP, altKeyvalPort);
 			      }
-			      
-			}
-		}catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			
 		}
-        
-     }
-
+		
+	
 	private void sendUpdateKeyValMessage(KeyValEntry receiveKV, int rightNode) {
 		byte[] partMessage = generateKeyValByteMessage(receiveKV);
 		byte[] fullMessage = addKeyValHeader("rightUpdate", partMessage);
@@ -1026,6 +1095,15 @@ private KeyValEntry kvParseKeyValByteMessage(byte[] bytes) {
 		}
 		return temp;
 	}
+
+void showCounters()
+{
+	System.out.println("No of a requests:" + counter1);
+	System.out.println("No of b requests:" + counter2);
+	System.out.println("No of c acks:" + counter3);
+	System.out.println("problem with add:" + counter4);
+	System.out.println("Time Gap:" + String.valueOf((long)(oddTime-evenTime)));
+}
 	
 }
 

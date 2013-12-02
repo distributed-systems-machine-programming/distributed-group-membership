@@ -49,7 +49,7 @@ public class runner {
 		String fullMachineID = getFullMachineID();
 		String shortMachineID = getShortMachineID();
 		
-		int m=17;
+		int m=24;
 		
 		//GET M-BIT IDENTIFIER
 		
@@ -80,7 +80,7 @@ public class runner {
 			//INITIALIZE HEART
 		
 		Heart dil = new Heart(HeartRate, memberList, fullMachineID);
-		
+		String contactIP;
 		
 		
 		//INITIALIZE GOSSIP LISTENER
@@ -94,12 +94,21 @@ public class runner {
 			gos_obj.gossip();
 			
 		}
+		if(args[0].equalsIgnoreCase("now"))
+		{
+			contactIP = args[2];
+			gos_obj.joinRequest(contactIP);
+			gos_obj.gossip();
+			
+			
+			
+		}
 		String[] temp;
 		boolean firstTimeJoin = true;
 		LOGGER.info(fullMachineID+" # "+"INITIALIZED");
 		while(true)
 		{
-			System.out.println("\nUSAGE: join [contactIP] | leave | show | count");
+			System.out.println("\nUSAGE: join [contactIP] | leave | show | count | counter");
 			System.out.print(">");
 			
 			input = br.readLine();
@@ -160,6 +169,12 @@ public class runner {
 			else if(temp[0].equalsIgnoreCase("count") )
 			{
 				map.count();
+				
+				
+			}
+			else if(temp[0].equalsIgnoreCase("counter") )
+			{
+				gos_obj.showcounters();
 				
 				
 			}

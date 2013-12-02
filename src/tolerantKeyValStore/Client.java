@@ -27,6 +27,10 @@ public class Client {
 		final static int BUFFER_SIZE = 1500;
 		final static int keyvalPort = 6789;
 		final static int altKeyvalPort = 6767;
+		static int key;
+		static int M=24;
+		static int counter=0;
+		static boolean received=true;
 		public static void sendKeyValmessage(byte[] message, String receiverIP)  {
 			//change implementation of this
 			 //String sentence;
@@ -59,17 +63,37 @@ public class Client {
 			}
 			
 		}
-		public static void getKeyValmessage(int key) {
+		public static void listener() {
 			//String clientSentence;
 			// String capitalizedSentence;
 			ServerSocket welcomeSocket;
 			try {
 				welcomeSocket = new ServerSocket(altKeyvalPort);
 			
-		        
+		        while(true)
+		        {
 		           Socket connectionSocket;
 				
 					connectionSocket = welcomeSocket.accept();
+					getKeyValmessage(connectionSocket);
+		           
+				      
+				}
+			}catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	        
+	     }
+		
+		
+		public static void getKeyValmessage(Socket connectionSocket) {
+			//String clientSentence;
+			// String capitalizedSentence;
+			System.out.println("Receive Number:"+counter);
+			counter++;
+			
+			try{
 				
 		           DataInputStream inFromClient = new DataInputStream(connectionSocket.getInputStream());
 		           int len = inFromClient.readInt();
@@ -98,8 +122,19 @@ public class Client {
 				      {
 				    	  System.out.println("Got Acknowledgement");
 				      }
-				      connectionSocket.close();
-				      welcomeSocket.close();
+				      
+				      //connectionSocket.close();
+				      while(true)
+				      {
+				    	  if(!received)
+				    	  {
+				    		  received=true;
+				    		  System.out.println("received changed to true");
+				    		  break;
+				    	  }
+				      } 
+				    	  
+				     
 			}
 			catch(Exception e)
 			{
@@ -107,11 +142,20 @@ public class Client {
 			}
 			
 		        }
-		public static void sendLookupMessage(byte[] message, String receiverIP, int key)  {
+		
+		
+			static Thread ListenerThread = new Thread () {
+				  public void run () {
+					  listener();
+				  }
+				};
+			
+		
+		public static void sendLookupMessage(byte[] message, String receiverIP, int key1)  {
 			//change implementation of this
 			 //String sentence;
 			 // String modifiedSentence;
-			 
+			 key=key1;
 			  Socket clientSocket;
 			try {
 				clientSocket = new Socket(receiverIP, keyvalPort);
@@ -143,7 +187,7 @@ public class Client {
 			  //modifiedSentence = inFromServer.readLine();
 			 // System.out.println("FROM SERVER: " + modifiedSentence);
 			  clientSocket.close();
-			  getKeyValmessage(key);
+			  
 			} catch (UnknownHostException e) {
 				
 				e.printStackTrace();
@@ -415,7 +459,7 @@ public class Client {
                         int id = Integer.parseInt(splitInput[0]);
                         String name = splitInput[1];
 
-                        int identifier = getMbitIdentifier(17, key);
+                        int identifier = getMbitIdentifier(M, key);
 
                         KeyValEntry newKV = new KeyValEntry(identifier, new Value(id, name));
                         
@@ -431,7 +475,7 @@ public class Client {
                                 System.out.print("Enter the Key [Usage : <KEY> ] : ");
                                 //key = scanIn.nextLine();
                                 key = br.readLine();
-                                int identifier = getMbitIdentifier(17, key);
+                                int identifier = getMbitIdentifier(M, key);
                                 byte byteMessage[] = addKeyValHeader(action,generateKeyValByteMessage(identifier));  
                                 long startTime = System.currentTimeMillis();
                                 sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
@@ -443,7 +487,7 @@ public class Client {
                             System.out.print("Enter the Key [Usage : <KEY> ] : ");
                             //key = scanIn.nextLine();
                             key = br.readLine();
-                            int identifier = getMbitIdentifier(17, key);
+                            int identifier = getMbitIdentifier(M, key);
                             byte byteMessage[] = addKeyValHeader(action,generateKeyValByteMessage(identifier));                                
                             long startTime = System.currentTimeMillis();
                             sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
@@ -465,7 +509,7 @@ public class Client {
                             int id = Integer.parseInt(splitInput[0]);
                             String name = splitInput[1];
 
-                            //int identifier = getMbitIdentifier(17, key);
+                            //int identifier = getMbitIdentifier(M, key);
 
                             KeyValEntry newKV = new KeyValEntry(identifier, new Value(id, name));
                             
@@ -519,16 +563,35 @@ public class Client {
             String serverIP = br.readLine();
             byte byteMessage1[] = addKeyValHeader("handshake",getLocalIP().getBytes()); 
             sendKeyValmessage(byteMessage1, serverIP);
+            ListenerThread.start();
             int Min = 1;
-            int Max = 1000000;
+            int Max = 1000000000;
             int k;
-        	for (int i=0; i<1000; i++) {
+            int send=0;
+            int receive = 0;
+            long evenTime = 0;
+            long oddTime;
+        	for (int i=0; i<1000000; ) {
+        		if(received)
+        		{
+        			Thread.sleep(10);
+        		System.out.println("I:"+ i);
         		k = Min + (int)(Math.random() * ((Max - Min) + 1));
+        		
                         System.out.println("\n--WELCOME TO KEY-VALUE STORE--\n");
                         //Scanner scanIn = new Scanner(System.in);        
                         String key = null;
                         String inputValue = null;
                         
+                        if(i/2 == 0)
+                        {
+                        	evenTime=System.currentTimeMillis();
+                        }
+                        else
+                        {
+                        	oddTime=System.currentTimeMillis();
+                        	System.out.println("Time Gap:" + String.valueOf((long)(oddTime-evenTime)));
+                        }
                         
                         System.out.println("Enter the keyValue Operation : add | update | lookup | delete");
                         
@@ -550,13 +613,19 @@ public class Client {
                         int id = Integer.parseInt(splitInput[0]);
                         String name = splitInput[1];
 
-                        int identifier = getMbitIdentifier(17, key);
+                        int identifier = getMbitIdentifier(M, key);
 
                         KeyValEntry newKV = new KeyValEntry(identifier, new Value(id, name));
                         
                         byte byteMessage[] = addKeyValHeader(action, generateKeyValByteMessage(newKV));
                         long startTime = System.currentTimeMillis();
+                        send++;
+                        received=false;
+                        System.out.println("received changed to false");
                         sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
+                        System.out.println("Send Number:" + i);
+                        
+                        receive++;
                         long stopTime = System.currentTimeMillis();
                         
                         aiyo.data.add(stopTime-startTime);
@@ -567,7 +636,7 @@ public class Client {
                                 //key = scanIn.nextLine();
                                 //key = br.readLine();
                                 key = String.valueOf(k);
-                                int identifier = getMbitIdentifier(17, key);
+                                int identifier = getMbitIdentifier(M, key);
                                 byte byteMessage[] = addKeyValHeader(action,generateKeyValByteMessage(identifier));  
                                 long startTime = System.currentTimeMillis();
                                 sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
@@ -580,7 +649,7 @@ public class Client {
                             //key = scanIn.nextLine();
                            // key = br.readLine();
                             key = String.valueOf(k);
-                            int identifier = getMbitIdentifier(17, key);
+                            int identifier = getMbitIdentifier(M, key);
                             byte byteMessage[] = addKeyValHeader(action,generateKeyValByteMessage(identifier));                                
                             long startTime = System.currentTimeMillis();
                             sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
@@ -602,7 +671,7 @@ public class Client {
                             int id = Integer.parseInt(splitInput[0]);
                             String name = splitInput[1];
 
-                            //int identifier = getMbitIdentifier(17, key);
+                            //int identifier = getMbitIdentifier(M, key);
 
                             KeyValEntry newKV = new KeyValEntry(identifier, new Value(id, name));
                             
@@ -644,8 +713,11 @@ public class Client {
                         {
                         	System.out.println("Invalid Command");
                         }
-
+                        i++;
                 }
+        	}
+        	System.out.println("Send:" + send);
+        	System.out.println("Send:" + receive);
         	aiyo.pushtofile();
         	
         }
