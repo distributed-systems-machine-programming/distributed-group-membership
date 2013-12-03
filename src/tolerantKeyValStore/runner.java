@@ -87,6 +87,7 @@ public class runner {
 		int lossRate = Integer.parseInt(args[1]);
 		
 		Gossiper gos_obj = new Gossiper(listenerPort, GossipSendingRate, memberList, fullMachineID, FailureCleanUpRate, FailureTimeOut, lossRate, m, identifier, map, keyvalPort);
+		ReplicationManager rm = new ReplicationManager(memberList, gos_obj, identifier);
 		gos_obj.gossip_listener();
 		gos_obj.keyval_listener();
 		if(args[0].equalsIgnoreCase("contact"))

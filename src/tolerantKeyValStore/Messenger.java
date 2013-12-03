@@ -15,7 +15,7 @@ import java.util.logging.Logger;
  * 
  */
 
-public class Messenger extends Thread {
+public class Messenger implements Runnable {
 	private final static int BUFFER_SIZE = 1500; ///using 1500 as its the recommended safe size for a UDP packet
 	private MemberList localMemberList = null;
 	private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -43,6 +43,8 @@ public class Messenger extends Thread {
     private int g;
     private int localIdentifier;
     private int localSuccessor;
+    private int localSuccessor1;
+    SenderThreadParameter param;
     private MapStore localMap;
     private String clientIP;
     private int m;
@@ -56,6 +58,7 @@ public class Messenger extends Thread {
     long oddTime=0;
     long evenTime1=0;
     long oddTime1=0;
+    private AckHandler ackStore= null;
     private static final int maxClientsCount = 10;
    // private static final clientThread[] threads = new clientThread[maxClientsCount];
 	Messenger (int port, MemberList localList, String machineID, int failureCleanUpRate, int failureTimeOut, int lossRate, int identifier, MapStore map, int keyvalPort, int m) throws Exception
@@ -73,6 +76,7 @@ public class Messenger extends Thread {
 			localMap = map;
 			this.keyvalPort = keyvalPort;
 			this.m = m;
+			ackStore = new AckHandler();
 			
 		}
 		catch (SocketException e)
@@ -604,7 +608,7 @@ public class Messenger extends Thread {
 	
 	public void findSuccessor(int identifier) {
 		
-		int[] allIdentifiers = new int[localMemberList.getSize()];
+		Integer[] allIdentifiers = new Integer[localMemberList.getSize()];
 		int i=0;
 		for(; i< localMemberList.getSize()-1; i++)
 		{
@@ -613,7 +617,7 @@ public class Messenger extends Thread {
 		}
 		allIdentifiers[i] = identifier;
 		Arrays.sort(allIdentifiers);
-		int index = Arrays.binarySearch(allIdentifiers, identifier);
+		int index = Arrays.asList(allIdentifiers).indexOf(identifier);
 		int successorIndex;
 		if(index == allIdentifiers.length-1)
 			successorIndex = 0;
@@ -621,11 +625,13 @@ public class Messenger extends Thread {
 			successorIndex = index+1;
 		
 		localSuccessor = allIdentifiers[successorIndex];
+		localSuccessor1 = allIdentifiers[(successorIndex+1)%(localMemberList.getSize())];
+		
 		//System.out.println(localSuccessor);
 	}
 public int findRightNode(int identifier) {
 		
-		int[] allIdentifiers = new int[localMemberList.getSize()+1];
+		Integer[] allIdentifiers = new Integer[localMemberList.getSize()+1];
 		int i=0;
 		for(; i< localMemberList.getSize(); i++)
 		{
@@ -634,7 +640,14 @@ public int findRightNode(int identifier) {
 		}
 		allIdentifiers[i] = identifier;
 		Arrays.sort(allIdentifiers);
-		int index = Arrays.binarySearch(allIdentifiers, identifier);
+		int index = Arrays.asList(allIdentifiers).indexOf(identifier);
+		System.out.println("SORT BITCH!");
+		for(int i1=0; i1<allIdentifiers.length; i1++)
+		{
+			System.out.println(allIdentifiers[i1]);
+		}
+		System.out.println(identifier);
+		System.out.println(index);
 		int successorIndex;
 		if(index == allIdentifiers.length-1)
 			successorIndex = 0;
@@ -644,6 +657,48 @@ public int findRightNode(int identifier) {
 		return allIdentifiers[successorIndex];
 		//System.out.println(localSuccessor);
 	}
+public int findRightNode1(int identifier) {
+	
+	Integer[] allIdentifiers = new Integer[localMemberList.getSize()+1];
+	int i=0;
+	for(; i< localMemberList.getSize(); i++)
+	{
+		allIdentifiers[i] = localMemberList.getFullList().get(i).getIdentifier();
+		
+	}
+	allIdentifiers[i] = identifier;
+	Arrays.sort(allIdentifiers);
+	int index = Arrays.asList(allIdentifiers).indexOf(identifier);
+	int successorIndex;
+	if(index == allIdentifiers.length-1)
+		successorIndex = 0;
+	else
+		successorIndex = index+1;
+	
+	return allIdentifiers[(successorIndex+1)%(allIdentifiers.length)];
+	//System.out.println(localSuccessor);
+}
+public int findRightNode2(int identifier) {
+	
+	Integer[] allIdentifiers = new Integer[localMemberList.getSize()+1];
+	int i=0;
+	for(; i< localMemberList.getSize(); i++)
+	{
+		allIdentifiers[i] = localMemberList.getFullList().get(i).getIdentifier();
+		
+	}
+	allIdentifiers[i] = identifier;
+	Arrays.sort(allIdentifiers);
+	int index = Arrays.asList(allIdentifiers).indexOf(identifier);
+	int successorIndex;
+	if(index == allIdentifiers.length-1)
+		successorIndex = 0;
+	else
+		successorIndex = index+1;
+	
+	return allIdentifiers[(successorIndex+2)%(allIdentifiers.length)];
+	//System.out.println(localSuccessor);
+}
 
 	public void sendKeyValmessage(byte[] message, String receiverIP)  {
 		sendKeyValmessage(message, receiverIP, keyvalPort);
@@ -709,6 +764,10 @@ public int findRightNode(int identifier) {
 		  }
 	};
 
+	
+	
+	
+
 	private void getKeyValmessageImpl(Socket connectionSocket) {
 			DataInputStream inFromClient = null;
 			try {
@@ -771,7 +830,13 @@ public int findRightNode(int identifier) {
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
 			    	  receiveKV.print();
 			    	  int rightNode = findRightNode(receiveKV.identifier);
-			    	  sendAddKeyValMessage(receiveKV, rightNode);
+			    	  int rightNode1 = findRightNode1(receiveKV.identifier);
+			    	  int rightNode2 = findRightNode2(receiveKV.identifier);
+			    	  //System.out.println("Successors");
+			    	  //System.out.println(String.valueOf(rightNode) +" "+ String.valueOf(rightNode1) + " "+String.valueOf(rightNode2));
+			    	  param = new SenderThreadParameter("add", rightNode, rightNode1, rightNode2, receiveKV); 
+			    	  run();
+			    	  
 			    	  
 					
 			    	  //localMap.addEntry(receiveKV.identifier, receiveKV.val);
@@ -781,7 +846,10 @@ public int findRightNode(int identifier) {
 		    		  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
 			    	  receiveKV.print();
 			    	  int rightNode = findRightNode(receiveKV.identifier);
-			    	  sendUpdateKeyValMessage(receiveKV, rightNode);
+			    	  int rightNode1 = findRightNode1(receiveKV.identifier);
+			    	  int rightNode2 = findRightNode2(receiveKV.identifier);
+			    	  param = new SenderThreadParameter("update", rightNode, rightNode1, rightNode2, receiveKV); 
+			    	  run();
 			    	  
 			      }
 			      else if(sType.equals("l"))
@@ -789,7 +857,10 @@ public int findRightNode(int identifier) {
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
 			    	  System.out.println(String.valueOf(receiveKeyIdentifier));
 			    	  int rightNode = findRightNode(receiveKeyIdentifier);
-			    	  sendLookupKeyValMessage(receiveKeyIdentifier, rightNode);
+			    	  int rightNode1 = findRightNode1(receiveKeyIdentifier);
+			    	  int rightNode2 = findRightNode2(receiveKeyIdentifier);
+			    	  param = new SenderThreadParameter("lookup", rightNode, rightNode1, rightNode2, receiveKeyIdentifier); 
+			    	  run();
 			      }
 			      
 			      else if(sType.equals("d"))
@@ -797,19 +868,13 @@ public int findRightNode(int identifier) {
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
 			    	  System.out.println(String.valueOf(receiveKeyIdentifier));
 			    	  int rightNode = findRightNode(receiveKeyIdentifier);
-			    	  sendDeleteKeyValMessage(receiveKeyIdentifier, rightNode);
+			    	  int rightNode1 = findRightNode(receiveKeyIdentifier);
+			    	  int rightNode2 = findRightNode(receiveKeyIdentifier);
+			    	  param = new SenderThreadParameter("delete", rightNode, rightNode1, rightNode2, receiveKeyIdentifier);
 			      }
 			      else if(sType.equals("b"))
 			      {
-			    	  if(counter2/2 == 0)
-                   {
-                   	evenTime1=System.currentTimeMillis();
-                   }
-                   else
-                   {
-                   	 oddTime1 = System.currentTimeMillis();
-                   	System.out.println("Time Gap for b:" + String.valueOf((long)(oddTime1-evenTime1)));
-                   }
+			    	
 			    	  counter2++;
 			    	  String serverContactIP = connectionSocket.getInetAddress().toString();
 			    	  serverContactIP = serverContactIP.substring(1);
@@ -823,7 +888,7 @@ public int findRightNode(int identifier) {
 			    	  {
 			    		  counter4++;
 			    	  }
-			    	  byte[] partMessage = generateKeyValByteMessage(9999);
+			    	  byte[] partMessage = generateKeyValByteMessage(receiveKV.identifier);
 			  		  byte[] fullMessage = addKeyValHeader("ack", partMessage);
 			  		 sendKeyValmessage(fullMessage, serverContactIP);
 			    	  
@@ -836,7 +901,7 @@ public int findRightNode(int identifier) {
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
 			    	  receiveKV.print();
 			    	  localMap.updateEntry(receiveKV.identifier, receiveKV.val);
-			    	  byte[] partMessage = generateKeyValByteMessage(9999);
+			    	  byte[] partMessage = generateKeyValByteMessage(receiveKV.identifier);
 			  		  byte[] fullMessage = addKeyValHeader("ack", partMessage);
 			  		 sendKeyValmessage(fullMessage, serverContactIP);
 			    	  
@@ -872,7 +937,7 @@ public int findRightNode(int identifier) {
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
 			    	  System.out.println(String.valueOf(receiveKeyIdentifier));
 			    	  localMap.deleteEntry(receiveKeyIdentifier);
-			    	  byte[] partMessage = generateKeyValByteMessage(9999);
+			    	  byte[] partMessage = generateKeyValByteMessage(receiveKeyIdentifier);
 			  		  byte[] fullMessage = addKeyValHeader("ack", partMessage);
 			  		 sendKeyValmessage(fullMessage, serverContactIP);
 			      }
@@ -892,12 +957,18 @@ public int findRightNode(int identifier) {
 			      }
 			      else if(sType.equals("c"))
 			      {
-			    	  //KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
+			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
 			    	  //receiveKV.print();
 			    	  //byte[] partMessage = generateKeyValByteMessage(receiveKV);
+			    	  if(ackStore.increaseCount(receiveKeyIdentifier) != 0)
+			    	  {
+			    	  
 			    	  counter3++;
+			    	  
 			  		  byte[] fullMessage = addKeyValHeader("clientAck", data);
 			  		  sendKeyValmessage(fullMessage, clientIP, altKeyvalPort);
+			    	  }
+			    	  ackStore.print();
 			      }
 			
 		}
@@ -1103,6 +1174,35 @@ void showCounters()
 	System.out.println("No of c acks:" + counter3);
 	System.out.println("problem with add:" + counter4);
 	System.out.println("Time Gap:" + String.valueOf((long)(oddTime-evenTime)));
+}
+
+@Override
+public void run() {
+	if(param.action.equalsIgnoreCase("add"))
+	{
+		sendAddKeyValMessage(param.kV, param.recipient1);
+		sendAddKeyValMessage(param.kV, param.recipient2);
+		sendAddKeyValMessage(param.kV, param.recipient3);
+	}
+	else if(param.action.equalsIgnoreCase("update"))
+	{
+		sendUpdateKeyValMessage(param.kV, param.recipient1);
+		sendUpdateKeyValMessage(param.kV, param.recipient2);
+		sendUpdateKeyValMessage(param.kV, param.recipient3);
+	}
+	else if(param.action.equalsIgnoreCase("delete"))
+	{
+		sendDeleteKeyValMessage(param.keyIdentifier, param.recipient1);
+		sendDeleteKeyValMessage(param.keyIdentifier, param.recipient2);
+		sendDeleteKeyValMessage(param.keyIdentifier, param.recipient3);
+	}
+	else if(param.action.equalsIgnoreCase("lookup"))
+	{
+		sendLookupKeyValMessage(param.keyIdentifier, param.recipient1);
+		sendLookupKeyValMessage(param.keyIdentifier, param.recipient2);
+		sendLookupKeyValMessage(param.keyIdentifier, param.recipient3);
+	}
+	
 }
 	
 }
