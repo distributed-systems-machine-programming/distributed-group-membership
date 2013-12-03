@@ -426,136 +426,176 @@ public class Client {
     		return MachineID;
     	}
 
+    	 public static void main(String []args) throws Exception {
+         	//String serverIP = "192.17.11.26";
+         	analysis aiyo = new analysis();
+         	BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+         	System.out.print("Enter Server IP: ");
+             String serverIP = br.readLine();
+             byte byteMessage1[] = addKeyValHeader("handshake",getLocalIP().getBytes()); 
+             sendKeyValmessage(byteMessage1, serverIP);
+             ListenerThread.start();
+             int Min = 1;
+             int Max = 1000000000;
+             int k;
+             int send=0;
+             int receive = 0;
+             long evenTime = 0;
+             long oddTime;
+             int i=0;
+         	while(true) {
+         		Thread.sleep(10);
+         		if(received)
+         		{
+         			
+         		System.out.println("I:"+ i);
+         		//k = Min + (int)(Math.random() * ((Max - Min) + 1));
+         		
+                         System.out.println("\n--WELCOME TO KEY-VALUE STORE--\n");
+                         //Scanner scanIn = new Scanner(System.in);        
+                         String key = null;
+                         String inputValue = null;
+                         
+                         if(i/2 == 0)
+                         {
+                         	evenTime=System.currentTimeMillis();
+                         }
+                         else
+                         {
+                         	oddTime=System.currentTimeMillis();
+                         	System.out.println("Time Gap:" + String.valueOf((long)(oddTime-evenTime)));
+                         }
+                         
+                         System.out.println("Enter the keyValue Operation : add | update | lookup | delete");
+                         
+                         String action = br.readLine();
+                         //String action = scanIn.nextLine();
+                         //String action = "add";
+                         if (action.equalsIgnoreCase("add") || action.equalsIgnoreCase("update") ){
+                         
+                         System.out.print("Enter the Key [Usage : <KEY> ] : ");
+                         //key = scanIn.nextLine();
+                         key=br.readLine();
+                         //key = String.valueOf(k);
+                         System.out.print("Enter the Value [Usage : <ID> SPACE <NAME> : ");
+                         //inputValue = scanIn.nextLine();
+                         inputValue=br.readLine();
+                         //inputValue="100 temp";
+                         String []splitInput = inputValue.split(" ");
+                         
+                         int id = Integer.parseInt(splitInput[0]);
+                         String name = splitInput[1];
+
+                         int identifier = getMbitIdentifier(M, key);
+
+                         KeyValEntry newKV = new KeyValEntry(identifier, new Value(id, name));
+                         
+                         byte byteMessage[] = addKeyValHeader(action, generateKeyValByteMessage(newKV));
+                         long startTime = System.currentTimeMillis();
+                         send++;
+                         received=false;
+                         System.out.println("received changed to false");
+                         sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
+                         System.out.println("Send Number:" + i);
+                         
+                         receive++;
+                         long stopTime = System.currentTimeMillis();
+                         
+                         aiyo.data.add(stopTime-startTime);
+                         }
+                         
+                         else if (action.equalsIgnoreCase( "lookup") ) {
+                                 System.out.print("Enter the Key [Usage : <KEY> ] : ");
+                                 //key = scanIn.nextLine();
+                                 key = br.readLine();
+                                 //key = String.valueOf(k);
+                                 int identifier = getMbitIdentifier(M, key);
+                                 byte byteMessage[] = addKeyValHeader(action,generateKeyValByteMessage(identifier));  
+                                 long startTime = System.currentTimeMillis();
+                                 sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
+                                 long stopTime = System.currentTimeMillis();
+                                 
+                                 aiyo.data.add(stopTime-startTime);
+                         }
+                         else if (action.equalsIgnoreCase("delete")) {
+                             System.out.print("Enter the Key [Usage : <KEY> ] : ");
+                             //key = scanIn.nextLine();
+                             key = br.readLine();
+                             //key = String.valueOf(k);
+                             int identifier = getMbitIdentifier(M, key);
+                             byte byteMessage[] = addKeyValHeader(action,generateKeyValByteMessage(identifier));                                
+                             long startTime = System.currentTimeMillis();
+                             sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
+                             long stopTime = System.currentTimeMillis();
+                             
+                             aiyo.data.add(stopTime-startTime);
+                     }
+                         
+                                                 
+                         else if (action.equalsIgnoreCase("iadd")|| action.equalsIgnoreCase("iupdate")){
+                         	System.out.print("Enter the Key [Usage : <KEY> ] : ");
+                             //key = scanIn.nextLine();
+                             int identifier=Integer.parseInt(br.readLine());
+                             System.out.print("Enter the Value [Usage : <ID> <SPACE> <NAME> : ");
+                             //inputValue = scanIn.nextLine();
+                             inputValue=br.readLine();
+                             String []splitInput = inputValue.split(" ");
+                             
+                             int id = Integer.parseInt(splitInput[0]);
+                             String name = splitInput[1];
+
+                             //int identifier = getMbitIdentifier(M, key);
+
+                             KeyValEntry newKV = new KeyValEntry(identifier, new Value(id, name));
+                             
+                             byte byteMessage[] = addKeyValHeader(action.substring(1), generateKeyValByteMessage(newKV));
+                             long startTime = System.currentTimeMillis();
+                             received=false;
+                             System.out.println("received changed to false");
+                             sendLookupMessage(byteMessage, serverIP, identifier);
+                             System.out.println("Send Number:" + i);
+                             long stopTime = System.currentTimeMillis();
+                             
+                             aiyo.data.add(stopTime-startTime);
+                         }
+                         else if (action.equalsIgnoreCase( "ilookup") ) {
+                             System.out.print("Enter the Key [Usage : <KEY> ] : ");
+                             //key = scanIn.nextLine();
+                             int identifier = Integer.parseInt(br.readLine());
+                             byte byteMessage[] = addKeyValHeader(action.substring(1),generateKeyValByteMessage(identifier));                                
+                             long startTime = System.currentTimeMillis();
+                             sendLookupMessage(byteMessage, serverIP, identifier);
+                             long stopTime = System.currentTimeMillis();
+                             
+                             aiyo.data.add(stopTime-startTime);
+                          }  
+                         else if (action.equalsIgnoreCase("idelete")) {
+                             System.out.print("Enter the Key [Usage : <KEY> ] : ");
+                             //key = scanIn.nextLine();
+                             int identifier = Integer.parseInt(br.readLine());
+                             byte byteMessage[] = addKeyValHeader(action.substring(1),generateKeyValByteMessage(identifier));                                
+                             long startTime = System.currentTimeMillis();
+                             sendLookupMessage(byteMessage, serverIP, identifier);
+                             long stopTime = System.currentTimeMillis();
+                             
+                             aiyo.data.add(stopTime-startTime);
+                          }  
+                         else if (action.equalsIgnoreCase("exit") || action.equalsIgnoreCase("quit"))
+                         {
+                         	br.close();
+                         	System.exit(0);
+                         }
+                         else
+                         {
+                         	System.out.println("Invalid Command");
+                         }
+                         i++;
+                 }
+         	}
+         	
+         	
+         }
         public static void xx(String []args) throws Exception {
-        	//String serverIP = "192.17.11.26";
-        	analysis aiyo = new analysis();
-        	BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        	System.out.print("Enter Server IP: ");
-            String serverIP = br.readLine();
-            byte byteMessage1[] = addKeyValHeader("handshake",getLocalIP().getBytes()); 
-            sendKeyValmessage(byteMessage1, serverIP);
-        	while(true) {
-                        System.out.println("\n--WELCOME TO KEY-VALUE STORE--\n");
-                        //Scanner scanIn = new Scanner(System.in);        
-                        String key = null;
-                        String inputValue = null;
-                        
-                        
-                        System.out.println("Enter the keyValue Operation : add | update | lookup | delete");
-                        
-                        String action = br.readLine();
-                        //String action = scanIn.nextLine();
-                        
-                        if (action.equalsIgnoreCase("add") || action.equalsIgnoreCase("update") ){
-                        
-                        System.out.print("Enter the Key [Usage : <KEY> ] : ");
-                        //key = scanIn.nextLine();
-                        key=br.readLine();
-                        System.out.print("Enter the Value [Usage : <ID> SPACE <NAME> : ");
-                        //inputValue = scanIn.nextLine();
-                        inputValue=br.readLine();
-                        String []splitInput = inputValue.split(" ");
-                        
-                        int id = Integer.parseInt(splitInput[0]);
-                        String name = splitInput[1];
-
-                        int identifier = getMbitIdentifier(M, key);
-
-                        KeyValEntry newKV = new KeyValEntry(identifier, new Value(id, name));
-                        
-                        byte byteMessage[] = addKeyValHeader(action, generateKeyValByteMessage(newKV));
-                        long startTime = System.currentTimeMillis();
-                        sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
-                        long stopTime = System.currentTimeMillis();
-                        
-                        aiyo.data.add(stopTime-startTime);
-                        }
-                        
-                        else if (action.equalsIgnoreCase( "lookup") ) {
-                                System.out.print("Enter the Key [Usage : <KEY> ] : ");
-                                //key = scanIn.nextLine();
-                                key = br.readLine();
-                                int identifier = getMbitIdentifier(M, key);
-                                byte byteMessage[] = addKeyValHeader(action,generateKeyValByteMessage(identifier));  
-                                long startTime = System.currentTimeMillis();
-                                sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
-                                long stopTime = System.currentTimeMillis();
-                                
-                                aiyo.data.add(stopTime-startTime);
-                        }
-                        else if (action.equalsIgnoreCase("delete")) {
-                            System.out.print("Enter the Key [Usage : <KEY> ] : ");
-                            //key = scanIn.nextLine();
-                            key = br.readLine();
-                            int identifier = getMbitIdentifier(M, key);
-                            byte byteMessage[] = addKeyValHeader(action,generateKeyValByteMessage(identifier));                                
-                            long startTime = System.currentTimeMillis();
-                            sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
-                            long stopTime = System.currentTimeMillis();
-                            
-                            aiyo.data.add(stopTime-startTime);
-                    }
-                        
-                                                
-                        else if (action.equalsIgnoreCase("iadd")|| action.equalsIgnoreCase("iupdate")){
-                        	System.out.print("Enter the Key [Usage : <KEY> ] : ");
-                            //key = scanIn.nextLine();
-                            int identifier=Integer.parseInt(br.readLine());
-                            System.out.print("Enter the Value [Usage : <ID> <SPACE> <NAME> : ");
-                            //inputValue = scanIn.nextLine();
-                            inputValue=br.readLine();
-                            String []splitInput = inputValue.split(" ");
-                            
-                            int id = Integer.parseInt(splitInput[0]);
-                            String name = splitInput[1];
-
-                            //int identifier = getMbitIdentifier(M, key);
-
-                            KeyValEntry newKV = new KeyValEntry(identifier, new Value(id, name));
-                            
-                            byte byteMessage[] = addKeyValHeader(action.substring(1), generateKeyValByteMessage(newKV));
-                            long startTime = System.currentTimeMillis();
-                            sendLookupMessage(byteMessage, serverIP, identifier);
-                            long stopTime = System.currentTimeMillis();
-                            
-                            aiyo.data.add(stopTime-startTime);
-                        }
-                        else if (action.equalsIgnoreCase( "ilookup") ) {
-                            System.out.print("Enter the Key [Usage : <KEY> ] : ");
-                            //key = scanIn.nextLine();
-                            int identifier = Integer.parseInt(br.readLine());
-                            byte byteMessage[] = addKeyValHeader(action.substring(1),generateKeyValByteMessage(identifier));                                
-                            long startTime = System.currentTimeMillis();
-                            sendLookupMessage(byteMessage, serverIP, identifier);
-                            long stopTime = System.currentTimeMillis();
-                            
-                            aiyo.data.add(stopTime-startTime);
-                         }  
-                        else if (action.equalsIgnoreCase("idelete")) {
-                            System.out.print("Enter the Key [Usage : <KEY> ] : ");
-                            //key = scanIn.nextLine();
-                            int identifier = Integer.parseInt(br.readLine());
-                            byte byteMessage[] = addKeyValHeader(action.substring(1),generateKeyValByteMessage(identifier));                                
-                            long startTime = System.currentTimeMillis();
-                            sendLookupMessage(byteMessage, serverIP, identifier);
-                            long stopTime = System.currentTimeMillis();
-                            
-                            aiyo.data.add(stopTime-startTime);
-                         }  
-                        else if (action.equalsIgnoreCase("exit") || action.equalsIgnoreCase("quit"))
-                        {
-                        	br.close();
-                        	System.exit(0);
-                        }
-                        else
-                        {
-                        	System.out.println("Invalid Command");
-                        }
-
-                }
-        	
-        }
-        public static void main(String []args) throws Exception {
         	//String serverIP = "192.17.11.26";
         	analysis aiyo = new analysis();
         	BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -571,10 +611,11 @@ public class Client {
             int receive = 0;
             long evenTime = 0;
             long oddTime;
-        	for (int i=0; i<1000000; ) {
+            int i=0;
+        	for (; i<20000; ) {
         		if(received)
         		{
-        			Thread.sleep(10);
+        			Thread.sleep(5);
         		System.out.println("I:"+ i);
         		k = Min + (int)(Math.random() * ((Max - Min) + 1));
         		
