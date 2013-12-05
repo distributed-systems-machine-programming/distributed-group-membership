@@ -81,7 +81,8 @@ public class Messenger implements Runnable {
 		}
 		catch (SocketException e)
 		{
-			System.out.println("Unable to create sendSocket or receiveSocket.");
+		e.printStackTrace();	
+		System.out.println("Unable to create sendSocket or receiveSocket.");
 		}
 		
 	}
@@ -422,7 +423,7 @@ public class Messenger implements Runnable {
 		  }
 		  else if(count >= 2)
 		  {
-			   noOfSenders = count/2;
+			   noOfSenders = count-1;
 		  }
 		  Collections.shuffle(allIPs);
 		  for(int i=0; i<noOfSenders; i++)
@@ -586,6 +587,18 @@ public class Messenger implements Runnable {
 			bType = cType.getBytes();
 			//System.out.println(String.valueOf(bType.length));
 		}
+		else if(messageType.equals("getAuthKeys"))
+		{
+			cType = "x";
+			bType = cType.getBytes();
+			//System.out.println(String.valueOf(bType.length));
+		}
+		else if(messageType.equals("sendAuthKeys"))
+		{
+			cType = "z";
+			bType = cType.getBytes();
+			//System.out.println(String.valueOf(bType.length));
+		}
 		byte[] c = new byte[bType.length + sendMessage.length];
 		System.arraycopy(bType, 0, c, 0, bType.length);
 		System.arraycopy(sendMessage, 0, c, bType.length, sendMessage.length);
@@ -711,7 +724,7 @@ public int findRightNode2(int identifier) {
 		  Socket clientSocket;
 		try {
 			clientSocket = new Socket(receiverIP, port);
-		
+			clientSocket.setReuseAddress(true);
 		  DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
 		  BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 		  //sentence = "Testing keyval connection from " + String.valueOf(localIdentifier)+ " to " +String.valueOf(localSuccessor);
@@ -724,10 +737,32 @@ public int findRightNode2(int identifier) {
 		  
 		  //modifiedSentence = inFromServer.readLine();
 		 // System.out.println("FROM SERVER: " + modifiedSentence);
+		  outToServer.close();
+		  inFromServer.close();
 		  clientSocket.close();
 		} catch (UnknownHostException e) {
 			
 			e.printStackTrace();
+			try {
+				System.out.println(receiverIP);
+				System.out.println(port);
+				Thread.sleep(1000);
+				
+				sendKeyValmessage(message, receiverIP, port);
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}  catch (NoRouteToHostException e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+			try {
+				Thread.sleep(10);
+				
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 		} catch (IOException e) {
 			
 			e.printStackTrace();
@@ -868,8 +903,8 @@ public int findRightNode2(int identifier) {
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
 			    	  System.out.println(String.valueOf(receiveKeyIdentifier));
 			    	  int rightNode = findRightNode(receiveKeyIdentifier);
-			    	  int rightNode1 = findRightNode(receiveKeyIdentifier);
-			    	  int rightNode2 = findRightNode(receiveKeyIdentifier);
+			    	  int rightNode1 = findRightNode1(receiveKeyIdentifier);
+			    	  int rightNode2 = findRightNode2(receiveKeyIdentifier);
 			    	  param = new SenderThreadParameter("delete", rightNode, rightNode1, rightNode2, receiveKeyIdentifier);
 			      }
 			      else if(sType.equals("b"))
@@ -970,10 +1005,24 @@ public int findRightNode2(int identifier) {
 			    	  }
 			    	  ackStore.print();
 			      }
+			      else if(sType.equals("x"))
+			      {
+			    	  int identifier = intParseKeyValByteMessage(data);
+			    	  System.out.println(String.valueOf(identifier));
+			    	  sendAuthenticKeys(identifier);
+			      }
+			      else if(sType.equals("z"))
+			      {
+			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
+				    	 receiveKV.print();
+				    	 localMap.addEntry(receiveKV.identifier, receiveKV.val);
+			      }
 			
 		}
 		
 	
+	
+
 	private void sendUpdateKeyValMessage(KeyValEntry receiveKV, int rightNode) {
 		byte[] partMessage = generateKeyValByteMessage(receiveKV);
 		byte[] fullMessage = addKeyValHeader("rightUpdate", partMessage);
@@ -1202,6 +1251,37 @@ public void run() {
 		sendLookupKeyValMessage(param.keyIdentifier, param.recipient2);
 		sendLookupKeyValMessage(param.keyIdentifier, param.recipient3);
 	}
+	
+}
+
+public void getAuthenticKeys(int crash1) {
+	byte[] partMessage = generateKeyValByteMessage(localIdentifier);
+	byte[] fullMessage = addKeyValHeader("getAuthKeys", partMessage);
+	sendKeyValmessage(fullMessage, getIPfromIdentifier(crash1));
+	
+}
+private void sendAuthenticKeys(int identifier) {
+	Map<Integer, Value> temp = localMap.getKeys();
+	int keySuccessor;
+	for (Entry<Integer, Value> entry : temp.entrySet())
+	{
+		
+		
+		KeyValEntry x = new KeyValEntry (entry.getKey(), entry.getValue());
+		
+			x.print();
+			keySuccessor = findRightNode(x.identifier);
+			if(keySuccessor == localIdentifier)
+			{
+				byte[] partMessage = generateKeyValByteMessage(x);
+				byte[] fullMessage = addKeyValHeader("sendAuthKeys", partMessage);
+				sendKeyValmessage(fullMessage, getIPfromIdentifier(identifier));
+			}
+		
+		
+	
+	}
+	
 	
 }
 	

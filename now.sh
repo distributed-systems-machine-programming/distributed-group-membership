@@ -1,0 +1,3 @@
+#!/bin/sh
+cd make_bin
+java tolerantKeyValStore.runner node 0 192.17.11.14 -cp tolerantKeyValStore.MemberListEntry tolerantKeyValStore.Heart tolerantKeyValStore.Messenger  tolerantKeyValStore.FaultRateCalculator tolerantKeyValStore.LogFormatter tolerantKeyValStore.LogWriter tolerantKeyValStore.Gossiper tolerantKeyValStore.MemberList tolerantKeyValStore.KeyValEntry tolerantKeyValStore.Value tolerantKeyValStore.MapStore tolerantKeyValStore.SenderThreadParameter tolerantKeyValStore.ReplicationManager tolerantKeyValStore.AckHandler tolerantKeyValStore.AckCount

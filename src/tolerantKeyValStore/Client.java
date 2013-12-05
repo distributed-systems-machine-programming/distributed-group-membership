@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.Console;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
@@ -22,6 +23,14 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Scanner;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 public class Client {
 		final static int BUFFER_SIZE = 1500;
@@ -435,6 +444,7 @@ public class Client {
              byte byteMessage1[] = addKeyValHeader("handshake",getLocalIP().getBytes()); 
              sendKeyValmessage(byteMessage1, serverIP);
              ListenerThread.start();
+             addSampleKeyValStore("sampleKeyValStore.xml", serverIP);
              int Min = 1;
              int Max = 1000000000;
              int k;
@@ -595,7 +605,65 @@ public class Client {
          	
          	
          }
-        public static void xx(String []args) throws Exception {
+        private static void addSampleKeyValStore(String xmlFile, String serverIP) {
+        	try {
+   			 
+    			File fXmlFile = new File(xmlFile);
+    			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+    			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+    			Document doc = dBuilder.parse(fXmlFile);
+    		 
+    			doc.getDocumentElement().normalize();
+    		 
+    			//System.out.println("Root element :" + doc.getDocumentElement().getNodeName());
+    		// System.out.println ("All values are in Milliseconds");
+    			NodeList nList = doc.getElementsByTagName("key");
+    		 
+    			int temp=0;
+    			System.out.println(nList.getLength());
+    			while (true && temp < nList.getLength()) {
+    				if(received )
+             		{
+    				Node nNode = nList.item(temp);
+    		 			 
+    				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+    		 
+    					Element eElement = (Element) nNode;
+    					
+                         
+                       
+                        String key1 = String.valueOf((eElement.getAttribute("id"))); 
+                        
+                        int id = Integer.parseInt(eElement.getElementsByTagName("ID").item(0).getTextContent());
+                        String name = eElement.getElementsByTagName("name").item(0).getTextContent();
+
+                        int identifier = getMbitIdentifier(M, key1);
+
+                        KeyValEntry newKV = new KeyValEntry(identifier, new Value(id, name));
+                        
+                        byte byteMessage[] = addKeyValHeader("add", generateKeyValByteMessage(newKV));
+                        long startTime = System.currentTimeMillis();
+                        //send++;
+                        received=false;
+                        System.out.println("received changed to false");
+                        sendLookupMessage(byteMessage, serverIP, Integer.valueOf(key));
+                        //System.out.println("Send Number:" + i);
+                        
+                        //receive++;
+    					
+    					
+    								 
+    				}
+    				temp++;
+             		}
+    				
+    			}
+    		    } catch (Exception e) {
+    			e.printStackTrace();
+    		    }
+			
+		}
+		public static void xx(String []args) throws Exception {
         	//String serverIP = "192.17.11.26";
         	analysis aiyo = new analysis();
         	BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -615,7 +683,7 @@ public class Client {
         	for (; i<20000; ) {
         		if(received)
         		{
-        			Thread.sleep(5);
+        			Thread.sleep(10);
         		System.out.println("I:"+ i);
         		k = Min + (int)(Math.random() * ((Max - Min) + 1));
         		

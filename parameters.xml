@@ -4,7 +4,7 @@
       <value>50</value>
 	</key>
 	<key id="FailureCleanUpRate">
-      <value>1500</value>
+      <value>2000</value>
 	</key>
 	<key id="FailureTimeOut">
       <value>500</value>

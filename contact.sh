@@ -1,0 +1,3 @@
+#!/bin/sh
+cd make_bin
+java tolerantKeyValStore.runner contact 0 -cp tolerantKeyValStore.MemberListEntry tolerantKeyValStore.Heart tolerantKeyValStore.Messenger  tolerantKeyValStore.FaultRateCalculator tolerantKeyValStore.LogFormatter tolerantKeyValStore.LogWriter tolerantKeyValStore.Gossiper tolerantKeyValStore.MemberList tolerantKeyValStore.KeyValEntry tolerantKeyValStore.Value tolerantKeyValStore.MapStore tolerantKeyValStore.SenderThreadParameter tolerantKeyValStore.ReplicationManager tolerantKeyValStore.AckHandler tolerantKeyValStore.AckCount
