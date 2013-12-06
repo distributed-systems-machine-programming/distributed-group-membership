@@ -1218,12 +1218,15 @@ private KeyValEntry kvParseKeyValByteMessage(byte[] bytes) {
 
 void showCounters()
 {
-	System.out.println("No of a requests:" + counter1);
-	System.out.println("No of b requests:" + counter2);
-	System.out.println("No of c acks:" + counter3);
-	System.out.println("problem with add:" + counter4);
-	System.out.println("Time Gap:" + String.valueOf((long)(oddTime-evenTime)));
+	//System.out.println("No of a requests:" + counter1);
+	//System.out.println("No of b requests:" + counter2);
+	//System.out.println("No of c acks:" + counter3);
+	//System.out.println("problem with add:" + counter4);
+	//System.out.println("Time Gap:" + String.valueOf((long)(oddTime-evenTime)));
+	showKeyTypeCounts();
 }
+
+
 
 @Override
 public void run() {
@@ -1282,6 +1285,40 @@ private void sendAuthenticKeys(int identifier) {
 	
 	}
 	
+	
+}
+
+private void showKeyTypeCounts() {
+	Map<Integer, Value> temp = localMap.getKeys();
+	int totalKeys =0;
+	int originalKeys = 0;
+	int repKeys = 0;
+	totalKeys = temp.size();
+	
+	int keySuccessor;
+	for (Entry<Integer, Value> entry : temp.entrySet())
+	{
+		
+		
+		KeyValEntry x = new KeyValEntry (entry.getKey(), entry.getValue());
+		
+			//x.print();
+			keySuccessor = findRightNode(x.identifier);
+			if(keySuccessor == localIdentifier)
+			{
+				originalKeys++;
+			}
+		
+		
+	
+	}
+	
+	
+   repKeys = totalKeys - originalKeys;
+   
+   System.out.println("Total Keys:" + totalKeys);
+   System.out.println("Original Keys:" + originalKeys);
+   System.out.println("Replicated Keys:" + repKeys);
 	
 }
 	

@@ -82,18 +82,95 @@ public class ReplicationManager extends Thread {
 
 	private void start2crashRecovery(int[] oldRing2, int[] newRing2) {
 		int [] crashMachineIDs = findCrashMachines(oldRing2, newRing2);
+		boolean isSimul = findCrashRelation(oldRing2, crashMachineIDs);
 		int relation1 = findcrashMachineRelation(crashMachineIDs[0], localIdentifier, oldRing2); 
 		int relation2 = findcrashMachineRelation(crashMachineIDs[1], localIdentifier, oldRing2);
 		System.out.println("crashMachineID1 " + crashMachineIDs[0]);
 		System.out.println("Relation1: " + relation1);
 		System.out.println("crashMachineID2 " + crashMachineIDs[1]);
 		System.out.println("Relation2: " + relation2);
+		if(isSimul)
+		{
+			int crash1 = findCrashRelativeMachine(crashMachineIDs[1], oldRing2, 1);
+			int crash2 = findCrashRelativeMachine(crashMachineIDs[1], oldRing2, 2);
+			int crash3 = findCrashRelativeMachine(crashMachineIDs[1], oldRing2, 3);
+			
+			if(relation2 == 1)
+			{
+				mess.getAuthenticKeys(crash3);
+				mess.getAuthenticKeys(crash2);
+			}
+			else if(relation2 == 2)
+			{
+				mess.getAuthenticKeys(crash1);
+				mess.getAuthenticKeys(crash3);
+				
+			}
+			else if(relation2 == 3)
+			{
+				mess.getAuthenticKeys(crash1);
+			}
+		}
+		else
+		{
+			int crash1 = findCrashRelativeMachine(crashMachineIDs[1], oldRing2, 1);
+			int crash2 = findCrashRelativeMachine(crashMachineIDs[1], oldRing2, 2);
+			int caughtInTheMiddle = findCrashRelativeMachine(crashMachineIDs[0], oldRing2, 1);
+			
+			if(relation1 == 1)
+			{
+				mess.getAuthenticKeys(crash1);
+			}
+			else if(relation2 == 1)
+			{
+				mess.getAuthenticKeys(crash2);
+				mess.getAuthenticKeys(caughtInTheMiddle);
+			}
+			else if(relation2 == 2)
+			{
+				mess.getAuthenticKeys(caughtInTheMiddle);
+			}
+		}
+		
+	}
+
+	private boolean findCrashRelation(int[] oldRing2, int[] crashMachineIDs) {
+		boolean isSim = false;
+		int id1 = -1;
+		int id2 = -1;
+		boolean flag1 = false;
+		boolean flag2 = false;
+		int k=0;
+		for(int i=1; i<oldRing2.length && k<2; i++)
+		{
+			if(oldRing2[i] == crashMachineIDs[0])
+			{
+				flag1 = true;
+				id1 = i;
+				k++;
+			}
+			if(oldRing2[i] == crashMachineIDs[1])
+			{
+				flag2 = true;
+				id2 = i;
+				k++;
+			}
+		
+		}
+		
+		if(((id2 - id1) == 1) || ((id2 - id1) == (oldRing2[0]-1)))
+		{
+			isSim = true;
+		}
+		
+		return isSim;
 	}
 
 	private int[] findCrashMachines(int[] oldRing2, int[] newRing2) {
 		int [] ret =  {-1, -1};
+		int [] id =   {-1, -1};
 		int k=0;
-		for(int i=1; i<oldRing2.length; i++)
+		for(int i=1; i<oldRing2.length && k<2; i++)
 		{
 			boolean flag = false;
 			for(int j=1; j<newRing2.length; j++)
@@ -106,10 +183,24 @@ public class ReplicationManager extends Thread {
 			if(!flag)
 			{
 				ret[k] = oldRing2[i];
+				id[k] = i;
+				
 				k++;
 			}
 		}
-		return ret;
+		
+		if(id[1] - id[0] > 2)
+			return ret;
+		else
+		{
+			int a = ret[0];
+			ret[0] = ret[1];
+			ret[1] = a;
+			return ret;
+		}
+		
+		
+		
 	}
 
 	private void start1crashRecovery(int[] oldRing2, int[] newRing2) {
