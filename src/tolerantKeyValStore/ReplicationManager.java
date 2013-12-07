@@ -13,8 +13,8 @@ public class ReplicationManager extends Thread {
 	int newPD1;
 	int newPD2;
 	int newPD3;
-	int[] oldRing;			//CONSTANT USE. BEWARE
-	int[] newRing;			//CONSTANT USE. BEWARE
+	int[] oldRing;			
+	int[] newRing;			
 	
 	ReplicationManager(MemberList memberList,Gossiper gos_obj, int identifier)
 	{
@@ -34,6 +34,7 @@ public class ReplicationManager extends Thread {
 		updateRing();
 		//updatePD();
 		findFailures();
+		findJoins();
 		/*System.out.println("OldRing: " + oldRing);
 		for(int i=0; i<oldRing.length; i++)
 			System.out.println(oldRing[i] + " ");
@@ -51,6 +52,17 @@ public class ReplicationManager extends Thread {
 		}
 	}
 	
+	private void findJoins() {
+		if(newRing[0] == oldRing[0]+1)
+		{
+			int joinMachineID = findCrashMachine(newRing, oldRing);
+			int relation = findcrashMachineRelation(joinMachineID, localIdentifier, newRing);
+			int join_1 = findCrashRelativeMachine(joinMachineID, newRing, -1);
+			
+		}
+		
+	}
+
 	private void findFailures() {
 		if(newRing[0] == oldRing[0]-1)
 		{
@@ -81,6 +93,13 @@ public class ReplicationManager extends Thread {
 	}
 
 	private void start2crashRecovery(int[] oldRing2, int[] newRing2) {
+		try {
+			Thread.sleep(1000);	//WAIT FOR THE OTHER MACHINES TO REALIZE THAT CRASH HAS HAPPENED
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("STARTED RECOVERY PROCESS");
 		int [] crashMachineIDs = findCrashMachines(oldRing2, newRing2);
 		boolean isSimul = findCrashRelation(oldRing2, crashMachineIDs);
 		int relation1 = findcrashMachineRelation(crashMachineIDs[0], localIdentifier, oldRing2); 
@@ -97,19 +116,29 @@ public class ReplicationManager extends Thread {
 			
 			if(relation2 == 1)
 			{
+				System.out.println("Getting keys from crash+3");
 				mess.getAuthenticKeys(crash3);
+				System.out.println("Keys received from crash+3");
+				System.out.println("Getting keys from crash+2");
 				mess.getAuthenticKeys(crash2);
+				System.out.println("Keys received from crash+2");
 			}
 			else if(relation2 == 2)
 			{
+				System.out.println("Getting keys from crash+1");
 				mess.getAuthenticKeys(crash1);
+				System.out.println("Keys received from crash+1");
+				System.out.println("Getting keys from crash+3");
 				mess.getAuthenticKeys(crash3);
-				
+				System.out.println("Keys received from crash+3");
 			}
 			else if(relation2 == 3)
 			{
+				System.out.println("Getting keys from crash+1");
 				mess.getAuthenticKeys(crash1);
+				System.out.println("Keys received from crash+1");
 			}
+			
 		}
 		else
 		{
@@ -119,18 +148,27 @@ public class ReplicationManager extends Thread {
 			
 			if(relation1 == 1)
 			{
+				System.out.println("Getting keys from crash+1");
 				mess.getAuthenticKeys(crash1);
+				System.out.println("Keys received from crash+1");
 			}
 			else if(relation2 == 1)
 			{
+				System.out.println("Getting keys from crash+2");
 				mess.getAuthenticKeys(crash2);
+				System.out.println("Keys received from crash+2");
+				System.out.println("Getting keys from middle crash machine");
 				mess.getAuthenticKeys(caughtInTheMiddle);
+				System.out.println("Keys received from middle crash machine");
 			}
 			else if(relation2 == 2)
 			{
+				System.out.println("Getting keys from middle crash machine");
 				mess.getAuthenticKeys(caughtInTheMiddle);
+				System.out.println("Keys received from middle crash machine");
 			}
 		}
+		System.out.println("RECOVERY PROCESS ENDED");
 		
 	}
 
@@ -158,7 +196,7 @@ public class ReplicationManager extends Thread {
 		
 		}
 		
-		if(((id2 - id1) == 1) || ((id2 - id1) == (oldRing2[0]-1)))
+		if(((id2 - id1) == 1) || ((id1 - id2) == (oldRing2[0]-1)))
 		{
 			isSim = true;
 		}
@@ -189,7 +227,7 @@ public class ReplicationManager extends Thread {
 			}
 		}
 		
-		if(id[1] - id[0] > 2)
+		if(id[1] - id[0] <= 2)
 			return ret;
 		else
 		{
@@ -204,6 +242,7 @@ public class ReplicationManager extends Thread {
 	}
 
 	private void start1crashRecovery(int[] oldRing2, int[] newRing2) {
+		System.out.println("RECOVERY PROCESS STARTED");
 		int crashMachineID = findCrashMachine(oldRing2, newRing2);
 		int relation = findcrashMachineRelation(crashMachineID, localIdentifier, oldRing2); 
 		int crash_1 = findCrashRelativeMachine(crashMachineID, oldRing2, -1);
@@ -222,17 +261,23 @@ public class ReplicationManager extends Thread {
 		
 		if(relation == 1)
 		{
+			System.out.println("Getting keys from crash-2");
 			mess.getAuthenticKeys(crash_2);
+			System.out.println("Keys received from crash-2");
 		}
 		else if (relation == 2)
 		{
+			System.out.println("Getting keys from crash-1");
 			mess.getAuthenticKeys(crash_1);
+			System.out.println("Keys received from crash-1");
 		}
 		else if(relation == 3)
 		{
+			System.out.println("Getting keys from crash+1");
 			mess.getAuthenticKeys(crash1);
+			System.out.println("Keys received from crash+1");
 		}
-		
+		System.out.println("RECOVERY PROCESS ENDED");
 	}
 
 	private int findCrashRelativeMachine(int crashMachineID, int[] oldRing2, int distance) {
@@ -296,10 +341,7 @@ public class ReplicationManager extends Thread {
 		{
 			return -1;
 		}
-			
-		
-		
-
+	
 	}
 
 	private int findCrashMachine(int[] oldRing2, int[] newRing2) {

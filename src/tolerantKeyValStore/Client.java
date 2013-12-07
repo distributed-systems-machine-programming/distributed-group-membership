@@ -435,7 +435,7 @@ public class Client {
     		return MachineID;
     	}
 
-    	 public static void main(String []args) throws Exception {
+    	 public static void xx(String []args) throws Exception {
          	//String serverIP = "192.17.11.26";
          	analysis aiyo = new analysis();
          	BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -663,7 +663,7 @@ public class Client {
     		    }
 			
 		}
-		public static void xx(String []args) throws Exception {
+		public static void main(String []args) throws Exception {
         	//String serverIP = "192.17.11.26";
         	analysis aiyo = new analysis();
         	BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -680,7 +680,7 @@ public class Client {
             long evenTime = 0;
             long oddTime;
             int i=0;
-        	for (; i<20000; ) {
+        	for (; i<5000; ) {
         		if(received)
         		{
         			Thread.sleep(10);
@@ -826,7 +826,7 @@ public class Client {
                 }
         	}
         	System.out.println("Send:" + send);
-        	System.out.println("Send:" + receive);
+        	System.out.println("Receive:" + receive);
         	aiyo.pushtofile();
         	
         }

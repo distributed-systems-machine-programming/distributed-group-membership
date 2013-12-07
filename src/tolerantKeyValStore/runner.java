@@ -44,6 +44,7 @@ public class runner {
 		initParams();
 		int listenerPort= 9898;
 		int keyvalPort = 6789;
+		int replicationServicePort = 6996;
 		
 		//ASSIGN MACHINE IDs
 		String fullMachineID = getFullMachineID();
@@ -86,10 +87,11 @@ public class runner {
 		//INITIALIZE GOSSIP LISTENER
 		int lossRate = Integer.parseInt(args[1]);
 		
-		Gossiper gos_obj = new Gossiper(listenerPort, GossipSendingRate, memberList, fullMachineID, FailureCleanUpRate, FailureTimeOut, lossRate, m, identifier, map, keyvalPort);
+		Gossiper gos_obj = new Gossiper(listenerPort, GossipSendingRate, memberList, fullMachineID, FailureCleanUpRate, FailureTimeOut, lossRate, m, identifier, map, keyvalPort, replicationServicePort);
 		ReplicationManager rm = new ReplicationManager(memberList, gos_obj, identifier);
 		gos_obj.gossip_listener();
 		gos_obj.keyval_listener();
+		gos_obj.replication_listener();
 		if(args[0].equalsIgnoreCase("contact"))
 		{
 			gos_obj.gossip();
@@ -109,7 +111,7 @@ public class runner {
 		LOGGER.info(fullMachineID+" # "+"INITIALIZED");
 		while(true)
 		{
-			System.out.println("\nUSAGE: join [contactIP] | leave | show | count | counter");
+			System.out.println("\nUSAGE: join [contactIP] | leave | show original | show replicas | count | counter");
 			System.out.print(">");
 			
 			input = br.readLine();
@@ -136,7 +138,7 @@ public class runner {
 					    }
 					memberList = new MemberList(fullMachineID, identifier);
 					dil = new Heart(HeartRate, memberList, fullMachineID);
-					gos_obj = new Gossiper(listenerPort, GossipSendingRate, memberList, fullMachineID, FailureCleanUpRate, FailureTimeOut, lossRate, m, identifier, map, keyvalPort);
+					gos_obj = new Gossiper(listenerPort, GossipSendingRate, memberList, fullMachineID, FailureCleanUpRate, FailureTimeOut, lossRate, m, identifier, map, keyvalPort, replicationServicePort);
 					gos_obj.gossip_listener();
 					gos_obj.joinRequest(temp[1]);
 					gos_obj.gossip();
@@ -158,6 +160,20 @@ public class runner {
 			{
 				LOGGER.info(fullMachineID+" # "+" CRASHED");
 				System.exit(0);
+				
+			}
+			else if(temp[0].equalsIgnoreCase("show original") )
+			{
+				LOGGER.info(fullMachineID+" # "+" Print All Keys");
+				gos_obj.printAuthKeys();
+				
+				
+			}
+			else if(temp[0].equalsIgnoreCase("show replicas") )
+			{
+				LOGGER.info(fullMachineID+" # "+" Print All Keys");
+				gos_obj.printReplicas();
+				
 				
 			}
 			else if(temp[0].equalsIgnoreCase("show") )

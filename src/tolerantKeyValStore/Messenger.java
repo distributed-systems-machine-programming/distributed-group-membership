@@ -31,6 +31,7 @@ public class Messenger implements Runnable {
     private int sendPort;
     private int listenerPort;
     private int keyvalPort;
+    private int replicationListenerPort;
     private byte[] newMessage;
     private int messageCount = 0;
     private String localMachineID;
@@ -54,14 +55,17 @@ public class Messenger implements Runnable {
     private int counter3=0;
     private int counter4=0;
     private int counter5=0;
+    private int replicaSendCounter =0;
+    private int replicaReceiveCounter =0;
     long evenTime=0;
     long oddTime=0;
     long evenTime1=0;
     long oddTime1=0;
     private AckHandler ackStore= null;
     private static final int maxClientsCount = 10;
+    private int noOfReplicasToReceive = -1;
    // private static final clientThread[] threads = new clientThread[maxClientsCount];
-	Messenger (int port, MemberList localList, String machineID, int failureCleanUpRate, int failureTimeOut, int lossRate, int identifier, MapStore map, int keyvalPort, int m) throws Exception
+	Messenger (int port, MemberList localList, String machineID, int failureCleanUpRate, int failureTimeOut, int lossRate, int identifier, MapStore map, int keyvalPort, int m, int replPort) throws Exception
 	{
 		localMemberList = localList;
 		listenerPort = port;
@@ -77,6 +81,7 @@ public class Messenger implements Runnable {
 			this.keyvalPort = keyvalPort;
 			this.m = m;
 			ackStore = new AckHandler();
+			replicationListenerPort = replPort;
 			
 		}
 		catch (SocketException e)
@@ -599,6 +604,18 @@ public class Messenger implements Runnable {
 			bType = cType.getBytes();
 			//System.out.println(String.valueOf(bType.length));
 		}
+		else if(messageType.equals("keyCount"))
+		{
+			cType = "y";
+			bType = cType.getBytes();
+			//System.out.println(String.valueOf(bType.length));
+		}
+		else if(messageType.equals("AuthKeysRequest"))
+		{
+			cType = "w";
+			bType = cType.getBytes();
+			//System.out.println(String.valueOf(bType.length));
+		}
 		byte[] c = new byte[bType.length + sendMessage.length];
 		System.arraycopy(bType, 0, c, 0, bType.length);
 		System.arraycopy(sendMessage, 0, c, bType.length, sendMessage.length);
@@ -654,13 +671,13 @@ public int findRightNode(int identifier) {
 		allIdentifiers[i] = identifier;
 		Arrays.sort(allIdentifiers);
 		int index = Arrays.asList(allIdentifiers).indexOf(identifier);
-		System.out.println("SORT BITCH!");
-		for(int i1=0; i1<allIdentifiers.length; i1++)
-		{
-			System.out.println(allIdentifiers[i1]);
-		}
-		System.out.println(identifier);
-		System.out.println(index);
+		//System.out.println("SORT BITCH!");
+		//for(int i1=0; i1<allIdentifiers.length; i1++)
+		//{
+			//System.out.println(allIdentifiers[i1]);
+		//}
+		//System.out.println(identifier);
+		//System.out.println(index);
 		int successorIndex;
 		if(index == allIdentifiers.length-1)
 			successorIndex = 0;
@@ -818,7 +835,7 @@ public int findRightNode2(int identifier) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
-	           System.out.println( String.valueOf(len));
+	           //System.out.println( String.valueOf(len));
 	           byte[] temp_data = new byte[len];
 	           if (len > 0) {
 	               try {
@@ -835,19 +852,19 @@ public int findRightNode2(int identifier) {
 			   System.arraycopy(temp_data, 0, type, 0, 1);
 			   System.arraycopy(temp_data, 1, data, 0, len-1);
 			      String sType = new String(type);
-			      System.out.println(sType);
+			      //System.out.println(sType);
 			      //outToClient.writeBytes(capitalizedSentence);
 			      if(sType.equals("g"))
 			      {
 			    	  int identifier = intParseKeyValByteMessage(data);
-			    	  System.out.println(String.valueOf(identifier));
+			    	  //System.out.println(String.valueOf(identifier));
 			    	  getAndSendKeyValsFromMap(identifier);
 			    	
 			      }
 			      else if(sType.equals("s"))
 			      {
 			    	 KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
-			    	 receiveKV.print();
+			    	 //receiveKV.print();
 			    	 localMap.addEntry(receiveKV.identifier, receiveKV.val);
 			      }
 			      else if(sType.equals("a"))
@@ -859,7 +876,7 @@ public int findRightNode2(int identifier) {
                    else
                    {
                    	oddTime = System.currentTimeMillis();
-                   	System.out.println("Time Gap for a:" + String.valueOf((long)(oddTime-evenTime)));
+                   	//System.out.println("Time Gap for a:" + String.valueOf((long)(oddTime-evenTime)));
                    }
 			    	  counter1++;
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
@@ -879,7 +896,7 @@ public int findRightNode2(int identifier) {
 		    	  else if(sType.equals("u"))
 			      {
 		    		  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
-			    	  receiveKV.print();
+			    	  //receiveKV.print();
 			    	  int rightNode = findRightNode(receiveKV.identifier);
 			    	  int rightNode1 = findRightNode1(receiveKV.identifier);
 			    	  int rightNode2 = findRightNode2(receiveKV.identifier);
@@ -890,7 +907,7 @@ public int findRightNode2(int identifier) {
 			      else if(sType.equals("l"))
 			      {
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
-			    	  System.out.println(String.valueOf(receiveKeyIdentifier));
+			    	 // System.out.println(String.valueOf(receiveKeyIdentifier));
 			    	  int rightNode = findRightNode(receiveKeyIdentifier);
 			    	  int rightNode1 = findRightNode1(receiveKeyIdentifier);
 			    	  int rightNode2 = findRightNode2(receiveKeyIdentifier);
@@ -901,11 +918,12 @@ public int findRightNode2(int identifier) {
 			      else if(sType.equals("d"))
 			      {
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
-			    	  System.out.println(String.valueOf(receiveKeyIdentifier));
+			    	 // System.out.println(String.valueOf(receiveKeyIdentifier));
 			    	  int rightNode = findRightNode(receiveKeyIdentifier);
 			    	  int rightNode1 = findRightNode1(receiveKeyIdentifier);
 			    	  int rightNode2 = findRightNode2(receiveKeyIdentifier);
 			    	  param = new SenderThreadParameter("delete", rightNode, rightNode1, rightNode2, receiveKeyIdentifier);
+			    	  run();
 			      }
 			      else if(sType.equals("b"))
 			      {
@@ -913,7 +931,7 @@ public int findRightNode2(int identifier) {
 			    	  counter2++;
 			    	  String serverContactIP = connectionSocket.getInetAddress().toString();
 			    	  serverContactIP = serverContactIP.substring(1);
-			    	  System.out.println("serverContactIP: " + serverContactIP);
+			    	 // System.out.println("serverContactIP: " + serverContactIP);
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
 			    	  receiveKV.print();
 			    	  try{
@@ -932,7 +950,7 @@ public int findRightNode2(int identifier) {
 			      {
 			    	  String serverContactIP = connectionSocket.getInetAddress().toString();
 			    	  serverContactIP = serverContactIP.substring(1);
-			    	  System.out.println("serverContactIP: " + serverContactIP);
+			    	 // System.out.println("serverContactIP: " + serverContactIP);
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
 			    	  receiveKV.print();
 			    	  localMap.updateEntry(receiveKV.identifier, receiveKV.val);
@@ -945,9 +963,9 @@ public int findRightNode2(int identifier) {
 			      {
 			    	  String serverContactIP = connectionSocket.getInetAddress().toString();
 			    	  serverContactIP = serverContactIP.substring(1);
-			    	  System.out.println("serverContactIP: " + serverContactIP);
+			    	  //System.out.println("serverContactIP: " + serverContactIP);
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
-			    	  System.out.println(String.valueOf(receiveKeyIdentifier));
+			    	  //System.out.println(String.valueOf(receiveKeyIdentifier));
 			    	  Value retVal = localMap.lookupEntry(receiveKeyIdentifier);
 			    	  KeyValEntry sendKV;
 			    	  if (retVal == null)
@@ -968,9 +986,9 @@ public int findRightNode2(int identifier) {
 			      {
 			    	  String serverContactIP = connectionSocket.getInetAddress().toString();
 			    	  serverContactIP = serverContactIP.substring(1);
-			    	  System.out.println("serverContactIP: " + serverContactIP);
+			    	  //System.out.println("serverContactIP: " + serverContactIP);
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
-			    	  System.out.println(String.valueOf(receiveKeyIdentifier));
+			    	  //System.out.println(String.valueOf(receiveKeyIdentifier));
 			    	  localMap.deleteEntry(receiveKeyIdentifier);
 			    	  byte[] partMessage = generateKeyValByteMessage(receiveKeyIdentifier);
 			  		  byte[] fullMessage = addKeyValHeader("ack", partMessage);
@@ -980,12 +998,12 @@ public int findRightNode2(int identifier) {
 			      {
 			    	  clientIP = connectionSocket.getInetAddress().toString();
 			    	  clientIP = clientIP.substring(1);
-			    	  System.out.println("ClientIP: " + clientIP);
+			    	  //System.out.println("ClientIP: " + clientIP);
 			      }
 			      else if(sType.equals("j"))
 			      {
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
-			    	  receiveKV.print();
+			    	  //receiveKV.print();
 			    	  byte[] partMessage = generateKeyValByteMessage(receiveKV);
 			  		  byte[] fullMessage = addKeyValHeader("clientLookup", partMessage);
 			  		  sendKeyValmessage(fullMessage, clientIP, altKeyvalPort);
@@ -1005,18 +1023,18 @@ public int findRightNode2(int identifier) {
 			    	  }
 			    	  ackStore.print();
 			      }
-			      else if(sType.equals("x"))
+			    /*  else if(sType.equals("x"))
 			      {
 			    	  int identifier = intParseKeyValByteMessage(data);
-			    	  System.out.println(String.valueOf(identifier));
+			    	  //System.out.println(String.valueOf(identifier));
 			    	  sendAuthenticKeys(identifier);
 			      }
 			      else if(sType.equals("z"))
 			      {
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
-				    	 receiveKV.print();
+				    	// receiveKV.print();
 				    	 localMap.addEntry(receiveKV.identifier, receiveKV.val);
-			      }
+			      }*/
 			
 		}
 		
@@ -1061,13 +1079,16 @@ public int findRightNode2(int identifier) {
 			int newIdentifier = getRelativeIdentifier(entry.getKey(), identifier);
 			KeyValEntry x = new KeyValEntry (entry.getKey(), entry.getValue());
 			if(newIdentifier>newLocalIdentifier)
-			{	System.out.println("Identifier: " + String.valueOf(identifier));
-			System.out.println("Identifier's IP: " + String.valueOf(getIPfromIdentifier(identifier)));
-			System.out.println("MembershipList: " + localMemberList.Print());
-				x.print();
+			{	//System.out.println("Identifier: " + String.valueOf(identifier));
+			//System.out.println("Identifier's IP: " + String.valueOf(getIPfromIdentifier(identifier)));
+			//System.out.println("MembershipList: " + localMemberList.Print());
+				//x.print();
 				byte[] partMessage = generateKeyValByteMessage(x);
 				byte[] fullMessage = addKeyValHeader("sendKeyVal", partMessage);
 				sendKeyValmessage(fullMessage, getIPfromIdentifier(identifier));
+			}
+			else
+			{
 				keys.add(entry.getKey());
 			}
 			
@@ -1223,6 +1244,8 @@ void showCounters()
 	//System.out.println("No of c acks:" + counter3);
 	//System.out.println("problem with add:" + counter4);
 	//System.out.println("Time Gap:" + String.valueOf((long)(oddTime-evenTime)));
+	System.out.println("Replica Send Counter:"  + replicaSendCounter);
+	System.out.println("Replica Receive Counter:" + replicaReceiveCounter);
 	showKeyTypeCounts();
 }
 
@@ -1257,10 +1280,66 @@ public void run() {
 	
 }
 
+
+private void showKeyTypeCounts() {
+	Map<Integer, Value> temp = localMap.getKeys();
+	int totalKeys =0;
+	int originalKeys = getOriginalKeyCount(temp);
+	int repKeys = 0;
+	totalKeys = temp.size();
+	
+	
+   repKeys = totalKeys - originalKeys;
+   
+   System.out.println("Total Keys:" + totalKeys);
+   System.out.println("Original Keys:" + originalKeys);
+   System.out.println("Replicated Keys:" + repKeys);
+	
+}
+private int getOriginalKeyCount(Map<Integer, Value> KeyStore){
+	int count=0;
+	int keySuccessor;
+	for (Entry<Integer, Value> entry : KeyStore.entrySet())
+	{
+		
+		
+		KeyValEntry x = new KeyValEntry (entry.getKey(), entry.getValue());
+		
+			//x.print();
+			keySuccessor = findRightNode(x.identifier);
+			if(keySuccessor == localIdentifier)
+			{
+				count++;
+			}
+		
+		
+	
+	}
+	return count;
+	
+}
+
+
 public void getAuthenticKeys(int crash1) {
 	byte[] partMessage = generateKeyValByteMessage(localIdentifier);
 	byte[] fullMessage = addKeyValHeader("getAuthKeys", partMessage);
-	sendKeyValmessage(fullMessage, getIPfromIdentifier(crash1));
+	System.out.println("replicaReceiveCounter before sending request :" + replicaReceiveCounter);
+	System.out.println("noOfReplicasToReceive before sending request :" + noOfReplicasToReceive);
+	sendKeyValmessage(fullMessage, getIPfromIdentifier(crash1), replicationListenerPort);
+	
+	while(true)
+	{
+		if (replicaReceiveCounter == noOfReplicasToReceive)
+		{
+			System.out.println("INSIDE IF");
+			noOfReplicasToReceive = -1;
+			break;
+		}
+		System.out.println("replicaReceiveCounter :" + replicaReceiveCounter);
+  	  System.out.println("noOfReplicasToReceive :" + noOfReplicasToReceive);
+		System.out.println("Running while!");
+	}
+	System.out.println("I can close this now. All keys received");
 	
 }
 private void sendAuthenticKeys(int identifier) {
@@ -1272,13 +1351,14 @@ private void sendAuthenticKeys(int identifier) {
 		
 		KeyValEntry x = new KeyValEntry (entry.getKey(), entry.getValue());
 		
-			x.print();
+			//x.print();
 			keySuccessor = findRightNode(x.identifier);
 			if(keySuccessor == localIdentifier)
 			{
 				byte[] partMessage = generateKeyValByteMessage(x);
 				byte[] fullMessage = addKeyValHeader("sendAuthKeys", partMessage);
-				sendKeyValmessage(fullMessage, getIPfromIdentifier(identifier));
+				sendKeyValmessage(fullMessage, getIPfromIdentifier(identifier), replicationListenerPort);
+				replicaSendCounter++;
 			}
 		
 		
@@ -1287,15 +1367,114 @@ private void sendAuthenticKeys(int identifier) {
 	
 	
 }
-
-private void showKeyTypeCounts() {
-	Map<Integer, Value> temp = localMap.getKeys();
-	int totalKeys =0;
-	int originalKeys = 0;
-	int repKeys = 0;
-	totalKeys = temp.size();
+public void replicationListener() {
+	ServerSocket welcomeSocket;
+	try {
+		welcomeSocket = new ServerSocket(replicationListenerPort);
 	
+        while(true)
+        {
+           Socket connectionSocket;
+		
+			connectionSocket = welcomeSocket.accept();
+			DataInputStream inFromClient = null;
+			try {
+				inFromClient = new DataInputStream(connectionSocket.getInputStream());
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+	           int len=0;
+			try {
+				len = inFromClient.readInt();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+	           //System.out.println( String.valueOf(len));
+	           byte[] temp_data = new byte[len];
+	           if (len > 0) {
+	               try {
+					inFromClient.read(temp_data);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+	           }
+	           
+	           //System.out.println(temp_data);
+	           byte[] type = new byte[1];
+			   byte[] data = new byte[len];
+			   System.arraycopy(temp_data, 0, type, 0, 1);
+			   System.arraycopy(temp_data, 1, data, 0, len-1);
+			      String sType = new String(type);
+			      //System.out.println(sType);
+			      //outToClient.writeBytes(capitalizedSentence);
+			      if(sType.equals("x"))
+			      {
+			    	  int identifier = intParseKeyValByteMessage(data);
+			    	  System.out.println("*******");
+			    	  showKeyTypeCounts();
+			    	  System.out.println("*******");
+			    	  int originalKeyCount = getOriginalKeyCount(localMap.getKeys());
+			    	  //System.out.println(String.valueOf(identifier));
+			    	  byte[] partMessage = generateKeyValByteMessage(originalKeyCount);
+			  		byte[] fullMessage = addKeyValHeader("keyCount", partMessage);
+			  		sendKeyValmessage(fullMessage, getIPfromIdentifier(identifier), replicationListenerPort);
+			    	 // sendAuthenticKeys(identifier);
+			      }
+			      else if(sType.equals("y"))
+			      {
+			    	   noOfReplicasToReceive= intParseKeyValByteMessage(data);
+				    	// receiveKV.print();
+			    	  replicaReceiveCounter=0;
+			    	  byte[] partMessage = generateKeyValByteMessage(localIdentifier);
+				  		byte[] fullMessage = addKeyValHeader("AuthKeysRequest", partMessage);
+				  		String serverContactIP = connectionSocket.getInetAddress().toString();
+				    	  serverContactIP = serverContactIP.substring(1);
+				  		sendKeyValmessage(fullMessage, serverContactIP, replicationListenerPort);
+			    	  
+				    	 
+			      }
+			      else if(sType.equals("w"))
+			      {
+			    	  int identifier = intParseKeyValByteMessage(data);
+			    	  System.out.println("*******");
+			    	  showKeyTypeCounts();
+			    	  System.out.println("*******");
+			    	  //int originalKeyCount = getOriginalKeyCount(localMap.getKeys());
+			    	  //System.out.println(String.valueOf(identifier));
+			    	 // byte[] partMessage = generateKeyValByteMessage(originalKeyCount);
+			  		//byte[] fullMessage = addKeyValHeader("keyCount", partMessage);
+			  		//sendKeyValmessage(fullMessage, getIPfromIdentifier(identifier), replicationListenerPort);
+			    	  sendAuthenticKeys(identifier);
+			    	  
+				    	 
+			      }
+			      
+			      else if(sType.equals("z"))
+			      {
+			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
+				    	// receiveKV.print();
+			    	  replicaReceiveCounter++;
+			    	  
+				    	 localMap.addEntry(receiveKV.identifier, receiveKV.val);
+				    	 
+			      }
+           
+		      
+		}
+	}catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	
+}
+
+public void printAuthKeys() {
+	int count=0;
 	int keySuccessor;
+	Map<Integer, Value> temp = localMap.getKeys();
 	for (Entry<Integer, Value> entry : temp.entrySet())
 	{
 		
@@ -1306,19 +1485,35 @@ private void showKeyTypeCounts() {
 			keySuccessor = findRightNode(x.identifier);
 			if(keySuccessor == localIdentifier)
 			{
-				originalKeys++;
+				x.print();
 			}
 		
 		
 	
 	}
 	
+}
+
+public void printReplicas() {
+	int count=0;
+	int keySuccessor;
+	Map<Integer, Value> temp = localMap.getKeys();
+	for (Entry<Integer, Value> entry : temp.entrySet())
+	{
+		
+		
+		KeyValEntry x = new KeyValEntry (entry.getKey(), entry.getValue());
+		
+			
+			keySuccessor = findRightNode(x.identifier);
+			if(keySuccessor != localIdentifier)
+			{
+				x.print();
+			}
+		
+		
 	
-   repKeys = totalKeys - originalKeys;
-   
-   System.out.println("Total Keys:" + totalKeys);
-   System.out.println("Original Keys:" + originalKeys);
-   System.out.println("Replicated Keys:" + repKeys);
+	}
 	
 }
 	

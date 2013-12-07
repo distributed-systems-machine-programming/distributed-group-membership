@@ -21,13 +21,13 @@ public class Gossiper extends Thread{
 	MapStore map;
 	final Logger LOGGER = Logger.getLogger(runner.class.getName());
 	
-	Gossiper(int port, int GossipSendingRate, MemberList localMemList, String mID, int failureCleanUpRate, int failureTimeOut, int lossRate, int m, int identifier, MapStore map, int keyvalPort) throws Exception
+	Gossiper(int port, int GossipSendingRate, MemberList localMemList, String mID, int failureCleanUpRate, int failureTimeOut, int lossRate, int m, int identifier, MapStore map, int keyvalPort, int replPort) throws Exception
 	{
 		this.port = port;
 		this.GossipSendingRate = GossipSendingRate;
 		this.localMemList = localMemList;
 		this.mID = mID;
-		messenger = new Messenger(port, localMemList,mID, failureCleanUpRate, failureTimeOut, lossRate, identifier, map, keyvalPort, m);
+		messenger = new Messenger(port, localMemList,mID, failureCleanUpRate, failureTimeOut, lossRate, identifier, map, keyvalPort, m, replPort);
 		this.m = m;
 		this.identifier = identifier;
 		this.map = map;
@@ -51,6 +51,15 @@ public class Gossiper extends Thread{
 		{
 			
 				messenger.getKeyValmessage();
+			
+		}
+	};
+	Thread replicationListenerThread = new Thread()
+	{
+		public void run()
+		{
+			
+				messenger.replicationListener();
 			
 		}
 	};
@@ -129,6 +138,18 @@ public class Gossiper extends Thread{
 	}
 	public void showcounters() {
 		messenger.showCounters();
+		
+	}
+	public void replication_listener() {
+		replicationListenerThread.start();
+		
+	}
+	public void printAuthKeys() {
+		messenger.printAuthKeys();
+		
+	}
+	public void printReplicas() {
+		messenger.printReplicas();
 		
 	}
 	
