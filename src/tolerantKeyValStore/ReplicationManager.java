@@ -58,6 +58,25 @@ public class ReplicationManager extends Thread {
 			int joinMachineID = findCrashMachine(newRing, oldRing);
 			int relation = findcrashMachineRelation(joinMachineID, localIdentifier, newRing);
 			int join_1 = findCrashRelativeMachine(joinMachineID, newRing, -1);
+			int join_2 = findCrashRelativeMachine(joinMachineID, newRing, -2);
+			try {
+				Thread.sleep(1000);	//WAIT FOR THE OTHER MACHINES TO REALIZE THAT JOIN HAS HAPPENED
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			if(relation == 1)
+			{
+				mess.purgeKeys(join_2);
+			}
+			else if(relation == 2)
+			{
+				mess.purgeKeys(join_1);
+			}
+			else if(relation == 3)
+			{
+				mess.purgeKeys(joinMachineID);
+			}
 			
 		}
 		

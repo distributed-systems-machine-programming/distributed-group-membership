@@ -1,4 +1,4 @@
-
+sho
 package tolerantKeyValStore;
 
 import java.io.*;
@@ -21,6 +21,7 @@ public class Messenger implements Runnable {
 	private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 	private final Lock read = readWriteLock.readLock();
 	private final Lock write = readWriteLock.writeLock();
+	private final Lock mapLock = readWriteLock.writeLock();
 	private DatagramSocket sendSocket = null;
 	private DatagramSocket receiveSocket = null;
 	private InetAddress sendAddress;
@@ -61,6 +62,7 @@ public class Messenger implements Runnable {
     long oddTime=0;
     long evenTime1=0;
     long oddTime1=0;
+    private boolean sendingKeys = false;
     private AckHandler ackStore= null;
     private static final int maxClientsCount = 10;
     private int noOfReplicasToReceive = -1;
@@ -1070,6 +1072,7 @@ public int findRightNode2(int identifier) {
 	}
 
 	private void getAndSendKeyValsFromMap(int identifier) {
+		mapLock.lock();
 		Map<Integer, Value> temp = localMap.getKeys();
 		ArrayList<Integer> keys = new ArrayList<Integer>();
 		int newLocalIdentifier = getRelativeIdentifier(localIdentifier, identifier);
@@ -1094,9 +1097,11 @@ public int findRightNode2(int identifier) {
 			
 		
 		}
-		for(int i=0; i<keys.size();i++) {
+		mapLock.unlock();
+		
+		/*for(int i=0; i<keys.size();i++) {
 			localMap.deleteEntry(keys.get(i));
-		}
+		}*/
 		
 		
 		
@@ -1131,7 +1136,35 @@ public int findRightNode2(int identifier) {
 		
 		
 	}
-
+	
+	public void purgeKeys(int identifier)
+	{
+    mapLock.lock();
+	
+	Map<Integer, Value> temp = localMap.getKeys();
+	ArrayList<Integer> keys = new ArrayList<Integer>();
+	int newLocalIdentifier = getRelativeIdentifier(localIdentifier, identifier);
+	for (Entry<Integer, Value> entry : temp.entrySet())
+	{
+		
+		int newIdentifier = getRelativeIdentifier(entry.getKey(), identifier);
+		KeyValEntry x = new KeyValEntry (entry.getKey(), entry.getValue());
+		if(newIdentifier>newLocalIdentifier)
+		{	//System.out.println("Identifier: " + String.valueOf(identifier));
+		//System.out.println("Identifier's IP: " + String.valueOf(getIPfromIdentifier(identifier)));
+		//System.out.println("MembershipList: " + localMemberList.Print());
+			//x.print();
+			keys.add(entry.getKey());
+		}
+		
+	
+	
+	}
+	for(int i=0; i<keys.size();i++) {
+		localMap.deleteEntry(keys.get(i));
+	}
+	mapLock.unlock();
+	}
 private int getRelativeIdentifier(int identifier, int reference) {
 		
 		int i1 = identifier-reference;
@@ -1154,9 +1187,10 @@ private void getAndSendKeyValsFromMap() {
 			sendKeyValmessage(fullMessage, getIPfromIdentifier(localSuccessor));
 			keys.add(entry.getKey());
 		}
+		/*
 		for(int i=0; i<keys.size();i++) {
 			localMap.deleteEntry(keys.get(i));
-		}
+		}*/
 	}
 	
 	
