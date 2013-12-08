@@ -5,31 +5,63 @@ import java.util.ArrayList;
 public class AckHandler {
 	
 	ArrayList<AckCount> AckList = new ArrayList<AckCount>();
+	int quorumLevel;
 	
 	
+	public AckHandler(int quorumLevel) {
+		this.quorumLevel = quorumLevel; 
+	}
+
+
 	public int increaseCount(int id)
 	{
 		int val=0;
 		boolean flag = false;
-		for(int i=0; i<AckList.size(); i++)
+		if(quorumLevel == 1)
 		{
-			if(AckList.get(i).identifier == id)
+			val = id;
+			flag=true;
+		}
+		else if(quorumLevel == 2)
+		{
+			for(int i=0; i<AckList.size(); i++)
 			{
-				flag = true;
-				if(AckList.get(i).count == 2)
+				if(AckList.get(i).identifier == id)
 				{
-					val = AckList.get(i).identifier;
-					AckList.remove(i);
-					return val;
-					
+					flag = true;
+					if(AckList.get(i).count == 1)
+					{
+						val = AckList.get(i).identifier;
+						AckList.remove(i);
+						return val;
+						
+					}
+										
 				}
-				if(AckList.get(i).count == 1)
+			}
+		}
+		else if(quorumLevel == 3)
+		{
+			for(int i=0; i<AckList.size(); i++)
+			{
+				if(AckList.get(i).identifier == id)
 				{
-					AckList.get(i).count++;
-					
-					return val;
+					flag = true;
+					if(AckList.get(i).count == 2)
+					{
+						val = AckList.get(i).identifier;
+						AckList.remove(i);
+						return val;
+						
+					}
+					if(AckList.get(i).count == 1)
+					{
+						AckList.get(i).count++;
+						
+						return val;
+					}
+						
 				}
-					
 			}
 		}
 		if(!flag)

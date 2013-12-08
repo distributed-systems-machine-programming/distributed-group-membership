@@ -44,6 +44,7 @@ public class Messenger implements Runnable {
     private int updateMessageCount=0;
     private int g;
     private int localIdentifier;
+    private int quorumLevel=3;
     private int localSuccessor;
     private int localSuccessor1;
     SenderThreadParameter param;
@@ -56,6 +57,8 @@ public class Messenger implements Runnable {
     private int counter3=0;
     private int counter4=0;
     private int counter5=0;
+    private int activeIdentifier=0;
+    private boolean ackSent=false;
     private int replicaSendCounter =0;
     private int replicaReceiveCounter =0;
     long evenTime=0;
@@ -82,7 +85,7 @@ public class Messenger implements Runnable {
 			localMap = map;
 			this.keyvalPort = keyvalPort;
 			this.m = m;
-			ackStore = new AckHandler();
+			ackStore = new AckHandler(quorumLevel);
 			replicationListenerPort = replPort;
 			
 		}
@@ -882,6 +885,8 @@ public int findRightNode2(int identifier) {
                    }
 			    	  counter1++;
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
+			    	  activeIdentifier = receiveKV.identifier;
+			    	  ackSent=false;
 			    	  receiveKV.print();
 			    	  int rightNode = findRightNode(receiveKV.identifier);
 			    	  int rightNode1 = findRightNode1(receiveKV.identifier);
@@ -899,6 +904,8 @@ public int findRightNode2(int identifier) {
 			      {
 		    		  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
 			    	  //receiveKV.print();
+		    		  activeIdentifier = receiveKV.identifier;
+			    	  ackSent=false;
 			    	  int rightNode = findRightNode(receiveKV.identifier);
 			    	  int rightNode1 = findRightNode1(receiveKV.identifier);
 			    	  int rightNode2 = findRightNode2(receiveKV.identifier);
@@ -908,7 +915,10 @@ public int findRightNode2(int identifier) {
 			      }
 			      else if(sType.equals("l"))
 			      {
+			    	  System.out.println("Got a lookup request at contact");
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
+			    	  activeIdentifier = receiveKeyIdentifier;
+			    	  ackSent=false;
 			    	 // System.out.println(String.valueOf(receiveKeyIdentifier));
 			    	  int rightNode = findRightNode(receiveKeyIdentifier);
 			    	  int rightNode1 = findRightNode1(receiveKeyIdentifier);
@@ -920,6 +930,8 @@ public int findRightNode2(int identifier) {
 			      else if(sType.equals("d"))
 			      {
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
+			    	  activeIdentifier = receiveKeyIdentifier;
+			    	  ackSent=false;
 			    	 // System.out.println(String.valueOf(receiveKeyIdentifier));
 			    	  int rightNode = findRightNode(receiveKeyIdentifier);
 			    	  int rightNode1 = findRightNode1(receiveKeyIdentifier);
@@ -963,16 +975,19 @@ public int findRightNode2(int identifier) {
 			      }
 			      else if(sType.equals("k"))
 			      {
+			    	  System.out.println("Got a lookup request at node");
 			    	  String serverContactIP = connectionSocket.getInetAddress().toString();
 			    	  serverContactIP = serverContactIP.substring(1);
 			    	  //System.out.println("serverContactIP: " + serverContactIP);
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
 			    	  //System.out.println(String.valueOf(receiveKeyIdentifier));
 			    	  Value retVal = localMap.lookupEntry(receiveKeyIdentifier);
+			    	  System.out.println("RETURN VAL" + retVal);
 			    	  KeyValEntry sendKV;
 			    	  if (retVal == null)
 			    	  {
-			    	   sendKV = new KeyValEntry(-1, new Value(141, "waste value"));
+			    		  System.out.println("Entry not found");
+			    	   sendKV = new KeyValEntry(receiveKeyIdentifier, new Value(141, "waste value"));
 			    	  }
 			    	  else
 			    	  {
@@ -1004,15 +1019,36 @@ public int findRightNode2(int identifier) {
 			      }
 			      else if(sType.equals("j"))
 			      {
+			    	  System.out.println("Seding ack for lookup at contact");
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
+			    	  KeyValEntry sendKV=null;
 			    	  //receiveKV.print();
-			    	  byte[] partMessage = generateKeyValByteMessage(receiveKV);
-			  		  byte[] fullMessage = addKeyValHeader("clientLookup", partMessage);
-			  		  sendKeyValmessage(fullMessage, clientIP, altKeyvalPort);
+			    	  if(receiveKV.identifier == activeIdentifier && !ackSent)
+			    	  {
+			    		  if(ackStore.increaseCount(receiveKV.identifier) != 0)
+				    	  {
+				    	  
+				    	  counter3++;
+				    	  if (receiveKV.val.ID == 141)
+				    	  {
+				    		  sendKV = new KeyValEntry(-1, new Value(141, "waste value"));
+				    	  }
+				    	  else
+				    	  {
+				    		  sendKV = receiveKV;
+				    	  }
+				    	  byte[] partMessage = generateKeyValByteMessage(sendKV);
+				  		  byte[] fullMessage = addKeyValHeader("clientLookup", partMessage);
+				  		  sendKeyValmessage(fullMessage, clientIP, altKeyvalPort);
+				  		  ackSent=true;
+				    	  }
+			    	  }
 			      }
 			      else if(sType.equals("c"))
 			      {
 			    	  int receiveKeyIdentifier = intParseKeyValByteMessage(data);
+			    	  if(receiveKeyIdentifier == activeIdentifier &&  !ackSent)
+			    	  {
 			    	  //receiveKV.print();
 			    	  //byte[] partMessage = generateKeyValByteMessage(receiveKV);
 			    	  if(ackStore.increaseCount(receiveKeyIdentifier) != 0)
@@ -1022,16 +1058,23 @@ public int findRightNode2(int identifier) {
 			    	  
 			  		  byte[] fullMessage = addKeyValHeader("clientAck", data);
 			  		  sendKeyValmessage(fullMessage, clientIP, altKeyvalPort);
+			    	  ackSent=true;
+			    	  }
 			    	  }
 			    	  ackStore.print();
 			      }
-			    /*  else if(sType.equals("x"))
+			      else if(sType.equals("q"))
 			      {
-			    	  int identifier = intParseKeyValByteMessage(data);
+			    	  quorumLevel = intParseKeyValByteMessage(data);
+			    	  System.out.println("New Quorum Level:" + quorumLevel);
+			    	  ackStore.quorumLevel=quorumLevel;
+			    	  byte[] partMessage = generateKeyValByteMessage(quorumLevel);
+			    	  byte[] fullMessage = addKeyValHeader("clientAck", data);
+			  		  sendKeyValmessage(fullMessage, clientIP, altKeyvalPort);
 			    	  //System.out.println(String.valueOf(identifier));
-			    	  sendAuthenticKeys(identifier);
+			    	  
 			      }
-			      else if(sType.equals("z"))
+			     /* else if(sType.equals("z"))
 			      {
 			    	  KeyValEntry receiveKV = kvParseKeyValByteMessage(data);
 				    	// receiveKV.print();
@@ -1517,6 +1560,7 @@ public void printAuthKeys() {
 		
 			//x.print();
 			keySuccessor = findRightNode(x.identifier);
+			System.out.println(keySuccessor);
 			if(keySuccessor == localIdentifier)
 			{
 				x.print();
@@ -1525,6 +1569,7 @@ public void printAuthKeys() {
 		
 	
 	}
+	
 	
 }
 
@@ -1540,6 +1585,7 @@ public void printReplicas() {
 		
 			
 			keySuccessor = findRightNode(x.identifier);
+			System.out.println(keySuccessor);
 			if(keySuccessor != localIdentifier)
 			{
 				x.print();
