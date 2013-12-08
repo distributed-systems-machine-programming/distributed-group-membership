@@ -435,7 +435,7 @@ public class Client {
     		return MachineID;
     	}
 
-    	 public static void main(String []args) throws Exception {
+    	 public static void xx(String []args) throws Exception {
          	//String serverIP = "192.17.11.26";
          	analysis aiyo = new analysis();
          	BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -663,7 +663,7 @@ public class Client {
     		    }
 			
 		}
-		public static void xx(String []args) throws Exception {
+		public static void main(String []args) throws Exception {
         	//String serverIP = "192.17.11.26";
         	analysis aiyo = new analysis();
         	BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
